@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment Variables (Crucial for security!)
+.env
+.env.local
+
+# Generated Schema (Optional: uncomment if you don't want to track it)
+# schema.yaml
+
+# OS and Editor Files
+.DS_Store
+.vscode/
+.idea/
