@@ -1,6 +1,6 @@
 from django.db import models
 from .quiz import Quiz
-from .quiz import Quiz
+
 
 
 class Question(models.Model):
