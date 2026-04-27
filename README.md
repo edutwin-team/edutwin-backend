@@ -141,7 +141,12 @@ Ne jamais push directement sur main ou develop
 ```
 
 ## Setup and launch
+0.acLoading 
+0. excute git hooks:
 
+   ```bash
+   git config core.hooksPath hooks
+   ```
 1. Create a virtual environment:
 
    ```bash

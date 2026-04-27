@@ -17,7 +17,10 @@ Including another URLconf
 
 # config/urls.py
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.http import JsonResponse
+
+
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -27,6 +30,11 @@ from drf_spectacular.views import (
 
 from core.views.auth import RegisterView, MeView
 from core.views.quiz import StartQuizView, SubmitQuizView
+
+def health_check(request):
+    return JsonResponse({
+        "status": "ok"
+    })
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -60,4 +68,9 @@ urlpatterns = [
     ),
     # 3. Optional: Serves Redoc (an alternative, cleaner UI)
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path('api/auth2/', include('user.urls')),
+    path('api/twins/', include('twins.urls')),
+    path('api/content/', include('content.urls')),
+    path('api/simulation/', include('simulation.urls')),
+    path('api/insights/', include('insights.urls')),
 ]
