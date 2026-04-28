@@ -28,13 +28,10 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
-from core.views.auth import RegisterView, MeView
-from core.views.quiz import StartQuizView, SubmitQuizView
 
 def health_check(request):
-    return JsonResponse({
-        "status": "ok"
-    })
+    return JsonResponse({"status": "ok"})
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -45,20 +42,6 @@ urlpatterns = [
         name="swagger-ui",
     ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    path("api/auth/register/", RegisterView.as_view(), name="auth-register"),
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),
-    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
-    path("api/auth/me/", MeView.as_view(), name="auth-me"),
-    path(
-        "api/quizzes/<int:quiz_id>/attempts/",
-        StartQuizView.as_view(),
-        name="quiz-start-attempt",
-    ),
-    path(
-        "api/attempts/<int:attempt_id>/submit/",
-        SubmitQuizView.as_view(),
-        name="quiz-submit-attempt",
-    ),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # 2. Serves the interactive Swagger UI
     path(
@@ -68,9 +51,9 @@ urlpatterns = [
     ),
     # 3. Optional: Serves Redoc (an alternative, cleaner UI)
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    path('api/auth2/', include('user.urls')),
-    path('api/twins/', include('twins.urls')),
-    path('api/content/', include('content.urls')),
-    path('api/simulation/', include('simulation.urls')),
-    path('api/insights/', include('insights.urls')),
+    path("api/auth2/", include("user.urls")),
+    path("api/twins/", include("twins.urls")),
+    path("api/content/", include("content.urls")),
+    path("api/simulation/", include("simulation.urls")),
+    path("api/insights/", include("insights.urls")),
 ]
