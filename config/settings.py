@@ -95,6 +95,13 @@ TEMPLATES = [
     },
 ]
 
+SPECTACULAR_SETTINGS = {
+    "TITLE": "EduTwin API",
+    "DESCRIPTION": "API for EduTwin platform",
+    "VERSION": "0.0.1",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
+
 WSGI_APPLICATION = "config.wsgi.application"
 
 
