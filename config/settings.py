@@ -49,10 +49,10 @@ INSTALLED_APPS = [
     "core",
     "drf_spectacular",
     "user",
-    'twins',
-    'content',
-    'simulation',
-    'insights',
+    "twins",
+    "content",
+    "simulation",
+    "insights",
 ]
 
 MIDDLEWARE = [
@@ -102,30 +102,19 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
 
 # 2. Check for the Supabase URL
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("SUPABASE_DB_URL")
 
-# 3. If it exists, securely override the SQLite config
+# DB NEEDS TO BE UP AT ALL TIME TO RUN THE APP
 if DATABASE_URL:
-    supabase_db = dj_database_url.parse(
+    pg_db = dj_database_url.parse(
         DATABASE_URL,
         conn_max_age=600,
         conn_health_checks=True,
     )
-    # Only override if the parser actually found a valid configuration
-    if supabase_db.get("ENGINE"):
-        DATABASES["default"] = supabase_db
-    else:
-        print(
-            "⚠️ Warning: DATABASE_URL is invalid or missing 'postgresql://' prefix. Falling back to SQLite."
-        )
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -150,7 +139,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "UTC+2"  # FUSEAU PARIS PAS TOUCHE
 
 USE_I18N = True
 
@@ -166,4 +155,4 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = 'user.User'
+AUTH_USER_MODEL = "user.User"
