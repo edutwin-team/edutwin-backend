@@ -18,7 +18,9 @@ from user.permissions import IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [permissions.AllowAny]
+
+    # permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, content_type=ContentType.course)
@@ -27,7 +29,8 @@ class CourseViewSet(viewsets.ModelViewSet):
 class QuizViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.prefetch_related("questions__answers")
     serializer_class = QuizSerializer
-    permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [permissions.AllowAny]
+    # permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, content_type=ContentType.quiz)
@@ -67,7 +70,8 @@ class QuizViewSet(viewsets.ModelViewSet):
 class QuestionViewSet(viewsets.ModelViewSet):  # type: ignore[override]
     queryset = Question.objects.none()
     serializer_class = QuestionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
         serializer.save(quiz_id=self.kwargs["quiz_pk"])
@@ -87,7 +91,8 @@ class QuestionViewSet(viewsets.ModelViewSet):  # type: ignore[override]
 class AnswerViewSet(viewsets.ModelViewSet):  # type: ignore[override]
     queryset = Answer.objects.none()
     serializer_class = AnswerSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
+    # permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(question_id=self.kwargs["question_pk"])
