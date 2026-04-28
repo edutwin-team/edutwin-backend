@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     "django_filters",
     "django_celery_results",
     "django_celery_beat",
-    "core",
     "drf_spectacular",
     "user",
     "twins",
@@ -102,17 +101,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# NE PAS UTILISER LE CLIENT SUPABASE (UTILISER POSTGRES DIRECT)
+URL_DB = os.getenv("SUPABASE_DB_URL")
 
-# 2. Check for the Supabase URL
-DATABASE_URL = os.getenv("SUPABASE_DB_URL")
+if not URL_DB:
+    raise ValueError("SUPABASE_DB_URL is not set")
 
-# DB NEEDS TO BE UP AT ALL TIME TO RUN THE APP
-if DATABASE_URL:
-    pg_db = dj_database_url.parse(
-        DATABASE_URL,
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+DATABASES = {"default": dj_database_url.parse(URL_DB)}
 
 
 # Password validation
@@ -139,7 +134,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC+2"  # FUSEAU PARIS PAS TOUCHE
+TIME_ZONE = "Europe/Paris"  # FUSEAU PARIS PAS TOUCHE
 
 USE_I18N = True
 
