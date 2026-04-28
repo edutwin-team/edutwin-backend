@@ -18,6 +18,12 @@ class Content(models.Model):
     content_type = EnumField(ContentType)
     title = models.CharField(max_length=255)
     is_published = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        "user.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="%(class)s_contents",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
