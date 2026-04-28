@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django_enum import EnumField
+from django.conf import settings
 from enum import IntEnum
 
 
@@ -40,3 +41,20 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+class EducationalProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="educational_profile"
+    )
+
+    school_name = models.CharField(max_length=255)
+    class_name = models.CharField(max_length=100, blank=True, null=True)
+    level = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.user.email
