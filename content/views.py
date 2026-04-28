@@ -1,6 +1,6 @@
 from django.db.models import QuerySet
 from rest_framework import permissions, viewsets
-from .models import Answer, Course, Question, Quiz
+from .models import Answer, Course, Question, Quiz, ContentType
 from .serializers import (
     AnswerSerializer,
     CourseSerializer,
@@ -26,7 +26,7 @@ class QuizViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        serializer.save(created_by=self.request.user, content_type=ContentType.quiz)
 
     # POST /api/content/quizzes/{id}/submit/
 
@@ -68,6 +68,9 @@ class QuestionViewSet(viewsets.ModelViewSet):  # type: ignore[override]
     serializer_class = QuestionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def perform_create(self, serializer):
+        serializer.save(quiz_id=self.kwargs["quiz_pk"])
+
     def get_queryset(self) -> QuerySet:
         return Question.objects.filter(quiz_id=self.kwargs["quiz_pk"]).prefetch_related(
             "answers"
@@ -78,6 +81,9 @@ class AnswerViewSet(viewsets.ModelViewSet):  # type: ignore[override]
     queryset = Answer.objects.none()
     serializer_class = AnswerSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(question_id=self.kwargs["question_pk"])
 
     def get_queryset(self) -> QuerySet:
         return Answer.objects.filter(question_id=self.kwargs["question_pk"])
