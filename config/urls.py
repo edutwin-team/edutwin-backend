@@ -43,6 +43,8 @@ urlpatterns = [
     ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     # 2. Serves the interactive Swagger UI
     path(
         "api/docs/",
