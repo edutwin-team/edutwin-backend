@@ -9,7 +9,7 @@ class TwinSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "level",
-            "learning_style",
+            "reading_speed",
             "strong_domains",
             "weak_domains",
             "reading_speed",

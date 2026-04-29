@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Twin, TwinSimulation
 from .serializers import TwinSerializer, TwinSimulationSerializer
 from .tasks import run_twin_simulation
@@ -10,7 +10,7 @@ from .tasks import run_twin_simulation
 class TwinViewSet(viewsets.ModelViewSet):
     queryset = Twin.objects.all()
     serializer_class = TwinSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @action(detail=True, methods=["post"], url_path="simulate")
     def simulate(self, request, pk=None):
@@ -33,7 +33,7 @@ class TwinViewSet(viewsets.ModelViewSet):
 
 class TwinSimulationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TwinSimulationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return TwinSimulation.objects.filter(twin_id=self.kwargs.get("twin_pk"))

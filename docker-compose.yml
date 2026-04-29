@@ -11,7 +11,9 @@ services:
     depends_on:
       - valkey
     environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
       - CELERY_BROKER_URL=redis://valkey:6379/0
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
 
   worker:
     build: .

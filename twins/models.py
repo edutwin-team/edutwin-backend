@@ -19,6 +19,7 @@ class DifficultyPerceived(models.IntegerChoices):
 class Twin(models.Model):
     name = models.CharField(max_length=255)
     level = models.IntegerField(default=5)  # 1-10
+    reading_speed = models.IntegerField(default=1.2)
     strong_domains = models.JSONField(default=list)  # ["math", "physics"]
     weak_domains = models.JSONField(default=list)  # ["history"]
     created_at = models.DateTimeField(auto_now_add=True)
