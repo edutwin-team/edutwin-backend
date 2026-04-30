@@ -49,9 +49,11 @@ class EducationalProfile(models.Model):
         related_name="educational_profile"
     )
 
-    school_name = models.CharField(max_length=255)
-    class_name = models.CharField(max_length=100, blank=True, null=True)
-    level = models.CharField(max_length=100, blank=True, null=True)
+    school = models.CharField(max_length=255)
+    diploma = models.CharField(max_length=255, blank=True, null=True)
+    institution_type = models.CharField(max_length=100, blank=True, null=True)
+    education_level = models.CharField(max_length=100, blank=True, null=True)
+    experience_years = models.IntegerField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
