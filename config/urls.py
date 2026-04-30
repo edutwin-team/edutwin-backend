@@ -45,8 +45,7 @@ urlpatterns = [
     ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="token-obtain-pair"),
-    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+
     # 2. Serves the interactive Swagger UI
     path(
         "api/docs/",
@@ -55,7 +54,7 @@ urlpatterns = [
     ),
     # 3. Optional: Serves Redoc (an alternative, cleaner UI)
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    path("api/auth2/", include("user.urls")),
+    path("api/auth/", include("user.urls")),
     path("api/twins/", include("twins.urls")),
     path("api/content/", include("content.urls")),
     path("api/simulation/", include("simulation.urls")),
