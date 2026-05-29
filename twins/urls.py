@@ -1,6 +1,18 @@
-from django.urls import path
-from . import views
+from rest_framework.routers import DefaultRouter
+from .views import PedagogicalContextViewSet, ObjectiveViewSet
 
-urlpatterns = [
-    path('', views.index),
-]
+router = DefaultRouter()
+
+router.register(
+    r"contexts",
+    PedagogicalContextViewSet,
+    basename="context"
+)
+
+router.register(
+    r"objectives",
+    ObjectiveViewSet,
+    basename="objective"
+)
+
+urlpatterns = router.urls
