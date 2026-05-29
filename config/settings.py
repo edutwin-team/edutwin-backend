@@ -90,6 +90,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+
 ROOT_URLCONF = "config.urls"
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -177,6 +178,7 @@ AUTH_USER_MODEL = "user.User"
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    os.getenv("FRONTEND_URL", "http://localhost:5173"),
 ]
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SECURE = False

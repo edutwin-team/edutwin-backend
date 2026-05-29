@@ -57,8 +57,8 @@ def activate_view(request, uidb64, token):
 def register_view(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save(is_active=True) # true for now set to false after configuring email validation
-        send_verification_email(user, request)
+        user = serializer.save() 
+        # send_verification_email(user, request)
 
         return Response(
             {"message": "Utilisateur créé. Vérifie ton email pour l’activer."},
