@@ -1,9 +1,19 @@
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from rest_framework import viewsets
+from .models import PedagogicalContext, Objective
+from .serializers import PedagogicalContextSerializer, ObjectiveSerializer
 
-@api_view(['GET'])
-def index(request):
-    return Response({
-        "app": "twins",
-        "status": "working"
-    })
+
+class PedagogicalContextViewSet(viewsets.ModelViewSet):
+    serializer_class = PedagogicalContextSerializer
+
+    def get_queryset(self):
+        # each user see hes own contexts
+        return PedagogicalContext.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class ObjectiveViewSet(viewsets.ModelViewSet):
+    queryset = Objective.objects.all()
+    serializer_class = ObjectiveSerializer
