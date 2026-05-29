@@ -45,3 +45,25 @@ class PedagogicalContextSerializer(serializers.ModelSerializer):
             )
 
         return context
+    
+    def update(self, instance, validated_data):
+        objectives_data = validated_data.pop("objectives", None)
+
+        # update context fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        if objectives_data is not None:
+            # delete old objectives
+            instance.objectives.all().delete()
+
+            # recreate objectives
+            for obj in objectives_data:
+                Objective.objects.create(
+                    context=instance,
+                    **obj
+                )
+
+        return instance
