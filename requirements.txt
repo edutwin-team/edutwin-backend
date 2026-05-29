@@ -39,6 +39,7 @@ google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.2
 googleapis-common-protos==1.73.1
 gunicorn==23.0.0
+groq==1.2.0
 httplib2==0.31.2
 idna==3.11
 inflection==0.5.1
@@ -68,7 +69,9 @@ python-dotenv==1.2.2
 python-ipware==3.0.0
 PyYAML==6.0.3
 qrcode==8.2
+qroq==0.0.3
 referencing==0.37.0
+redis==7.4.0
 requests==2.32.5
 requests-oauthlib==2.0.0
 rpds-py==0.30.0

@@ -1,35 +1,38 @@
 services:
-  db:
-    image: postgres:18-alpine
-    restart: unless-stopped
+  api:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - valkey
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myuser -d mydb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - CELERY_BROKER_URL=redis://valkey:6379/0
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
 
-  redis:
-    image: valkey:9.0-alpine
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6379:6379"
+  worker:
+    build: .
+    command: celery -A config worker -l info
     volumes:
-      - redis_data:/data
-    command: redis-server --save 60 1 --loglevel warning
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - valkey
+    environment:
+      - CELERY_BROKER_URL=redis://valkey:6379/0
+
+  valkey:
+    image: valkey/valkey:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
 
 volumes:
-  db_data:
-  redis_data:
+  valkey_data:
