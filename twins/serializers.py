@@ -11,6 +11,8 @@ class ObjectiveSerializer(serializers.ModelSerializer):
 class PedagogicalContextSerializer(serializers.ModelSerializer):
     objectives = ObjectiveSerializer(many=True)
 
+    twins = serializers.SerializerMethodField()
+
     class Meta:
         model = PedagogicalContext
         fields = [
@@ -24,8 +26,12 @@ class PedagogicalContextSerializer(serializers.ModelSerializer):
             "academic_year",
             "description",
             "objectives",
+            "twins",
         ]
         read_only_fields = ["user"]
+
+    def get_twins(self, obj):
+        return 0
 
     def create(self, validated_data):
         objectives_data = validated_data.pop("objectives", [])
