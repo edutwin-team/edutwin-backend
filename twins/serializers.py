@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PedagogicalContext, Objective
+from .models import PedagogicalContext, Objective,DigitalTwin,Behavior
 
 
 class ObjectiveSerializer(serializers.ModelSerializer):
@@ -67,3 +67,70 @@ class PedagogicalContextSerializer(serializers.ModelSerializer):
                 )
 
         return instance
+
+class BehaviorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Behavior
+        fields = [
+            "id",
+            "comprehension_level",
+            "motivation",
+            "learning_speed",
+            "error_rate",
+            "learning_style",
+            "fatigue_level",
+            "attention_level",
+            "stress_level",
+            "curiosity_level",
+            "autonomy_level",
+            "persistence_level",
+            "memory_retention",
+            "preferred_content_type",
+            "question_frequency",
+            "comment",
+        ]
+
+class DigitalTwinSerializer(serializers.ModelSerializer):
+    behavior = BehaviorSerializer(required=False)
+    context_name = serializers.CharField(source='context.name', read_only=True)
+
+    class Meta:
+        model = DigitalTwin
+        fields = [
+            "id",
+            "context",
+            "context_name", 
+            "name",
+            "age",
+            "average_grade",
+            "description",
+            "behavior",
+        ]
+        read_only_fields = ["user"]
+
+    def create(self, validated_data):
+        behavior_data = validated_data.pop("behavior", None)
+
+        twin = DigitalTwin.objects.create(**validated_data)
+
+        if behavior_data:
+            Behavior.objects.create(twin=twin, **behavior_data)
+
+        return twin
+
+    def update(self, instance, validated_data):
+        behavior_data = validated_data.pop("behavior", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        if behavior_data:
+            Behavior.objects.update_or_create(
+                twin=instance,
+                defaults=behavior_data
+            )
+
+        return instance
+    
