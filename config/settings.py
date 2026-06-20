@@ -59,12 +59,13 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    # "django.middleware.csrf.CsrfViewMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+#todo : add mini length and strong  password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -82,12 +83,22 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "user.auth.CsrfExemptSessionAuthentication",
+        'rest_framework.authentication.SessionAuthentication',   
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    
+      "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+      #initial rate limiting values
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "5000/day",   # 5000 requests per day for logged in user 
+        "anon": "100/hour",   # 100 request per hour for a non logged in user
+    }
 }
 
 
@@ -180,7 +191,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     os.getenv("FRONTEND_URL", "http://localhost:5173"),
 ]
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    os.getenv("FRONTEND_URL", "http://localhost:5173"),
+]
 CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SAMESITE = "Lax"
+
+
+

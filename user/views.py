@@ -10,6 +10,7 @@ from .tokens import account_activation_token
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from .utils import send_verification_email
+from django.middleware.csrf import get_token
 from django.shortcuts import render
 from drf_spectacular.utils import (
     extend_schema,
