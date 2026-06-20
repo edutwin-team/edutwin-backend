@@ -21,6 +21,7 @@ from django.urls import path, include
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 
+
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -31,8 +32,9 @@ from drf_spectacular.views import (
 
 def health_check(request):
     return JsonResponse({"status": "ok"})
-# def csrf_api(request):
-#     return JsonResponse({"csrfToken": get_token(request)})
+
+def csrf_api(request):
+    return JsonResponse({"csrfToken": get_token(request)})
 
 
 urlpatterns = [
@@ -59,5 +61,5 @@ urlpatterns = [
     path("api/content/", include("content.urls")),
     path("api/simulation/", include("simulation.urls")),
     path("api/insights/", include("insights.urls")),
-    # path('api/csrf/', csrf_api),
+    path('api/csrf/', csrf_api),
 ]
