@@ -1,60 +1,114 @@
 from django.db import models
-from django_enum import EnumField
-from enum import IntEnum
+
+from django.conf import settings
 
 
-class ContentType(IntEnum):
-    course = 1
-    quiz = 2
+
+#enums
+
+class QuestionType(models.TextChoices):
+    SINGLE_CHOICE = "single_choice", "Single choice"
+    MULTIPLE_CHOICE = "multiple_choice", "Multiple choice"
+    TRUE_FALSE = "true_false", "True / False"
+    
+class DifficultyLevel(models.TextChoices):
+    EASY = "easy", "Easy"
+    MEDIUM = "medium", "Medium"
+    HARD = "hard", "Hard"
 
 
-class QuestionType(IntEnum):
-    single_choice = 1
-    multiple_choice = 2
-    true_false = 3
+class ContentSourceType(models.TextChoices):
+    MANUAL = "manual", "Manual"
+    IMPORT_FILE = "import_file", "Import File"
 
 
-class Content(models.Model):
-    content_type = EnumField(ContentType)
-    title = models.CharField(max_length=255)
-    is_published = models.BooleanField(default=False)
-    created_by = models.ForeignKey(
-        "user.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="%(class)s_contents",
+#course model (not used for mvp)
+
+class Course(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="courses",
+        
     )
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    content = models.TextField()
+
+    source_type = models.CharField(
+        max_length=20,
+        choices=ContentSourceType.choices,
+        default=ContentSourceType.MANUAL
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        abstract = True  # NE PAS SUPRIMER == EMPECHE CREATION DE CLASSE
-
-
-class Course(Content):
-    description = models.TextField()
-    body = models.TextField()
-
     def __str__(self):
-        return f"Course: {self.title}"
+        return self.title
 
 
-class Quiz(Content):
+#quiz model
+
+class Quiz(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quizzes",
+    )
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+
     passing_score = models.IntegerField(default=50)
     time_limit_minutes = models.IntegerField(default=15)
 
-    def __str__(self):
-        return f"Quiz: {self.title}"
+    source_type = models.CharField(
+        max_length=20,
+        choices=ContentSourceType.choices,
+        default=ContentSourceType.MANUAL
+    )
 
+    # a quiz can be independent or related to a course
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="quizzes",
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
+#quition model
 
 class Question(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions")
-    title = models.CharField(max_length=500)
-    question_type = EnumField(QuestionType, default=QuestionType.single_choice)
+    text = models.TextField()
+    question_type = models.CharField(
+        max_length=30,
+        choices=QuestionType.choices,
+        default=QuestionType.SINGLE_CHOICE
+    )
+
+    difficulty_level = models.CharField(
+        max_length=20,
+        choices=DifficultyLevel.choices,
+        default=DifficultyLevel.MEDIUM
+    )
+   
 
     def __str__(self):
-        return f"Question: {self.title}"
+        return f"Question: {self.text}"
 
+
+# answer model
 
 class Answer(models.Model):
     question = models.ForeignKey(
