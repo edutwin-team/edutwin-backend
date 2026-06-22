@@ -1,50 +1,66 @@
 from django.db import models
-
-# Create your models here.
-
-
-
-from django.db import models
-from django_enum import EnumField
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
-# Create your models here.
-#
-#
-#
+class SimulationResult(models.Model):
+    """Persists every simulation run for history/analytics."""
 
+    class SimulationType(models.TextChoices):
+        QUIZ = "quiz", "Quiz"
+        COURSE = "course", "Course"
 
-# class DifficultyPerceived(models.IntegerChoices):
-#     too_easy = 1
-#     easy = 2
-#     appropriate = 3
-#     hard = 4
-#     too_hard = 5
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="simulation_results",
+    )
 
+    twin = models.ForeignKey(
+        "twins.DigitalTwin",
+        on_delete=models.CASCADE,
+        related_name="simulation_results",
+    )
 
-# class Twin(models.Model):
-#     name = models.CharField(max_length=255)
-#     level = models.IntegerField(default=5)  # 1-10
-#     reading_speed = models.IntegerField(default=1.2)
-#     strong_domains = models.JSONField(default=list)  # ["math", "physics"]
-#     weak_domains = models.JSONField(default=list)  # ["history"]
-#     created_at = models.DateTimeField(auto_now_add=True)
+    simulation_type = models.CharField(
+        max_length=10,
+        choices=SimulationType.choices,
+    )
 
-#     def __str__(self):
-#         return f"Twin: {self.name} (lvl {self.level})"
+    # Generic FK to either Quiz or Course (store id + type)
+    quiz = models.ForeignKey(
+        "content.Quiz",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="simulation_results",
+    )
+    course = models.ForeignKey(
+        "content.Course",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="simulation_results",
+    )
 
+    simulated_score = models.FloatField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    simulated_time_seconds = models.IntegerField()
+    passed = models.BooleanField(null=True, blank=True)  # null for course
+    correct = models.IntegerField(null=True, blank=True)  # null for course
+    total = models.IntegerField(null=True, blank=True)  # null for course
 
-# class TwinSimulation(models.Model):
-#     twin = models.ForeignKey(Twin, on_delete=models.CASCADE, related_name="simulations")
-#     content_type = models.CharField(max_length=50)  # "quiz" ou "course"
-#     content_id = models.IntegerField()
-#     simulated_score = models.IntegerField(null=True, blank=True)  # règles déterministes
-#     simulated_time_seconds = models.IntegerField(null=True, blank=True)
-#     difficulty_perception = models.IntegerField(
-#         choices=DifficultyPerceived.choices, null=True, blank=True
-#     )
-#     llm_feedback = models.TextField(blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
+    feedback = models.TextField(blank=True)
 
-#     def __str__(self):
-#         return f"Simulation {self.twin.name} on {self.content_type}:{self.content_id}"
+    # Snapshot of behavior at time of simulation
+    behavior_snapshot = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        target = self.quiz or self.course
+        return f"[{self.simulation_type}] {self.twin.name} → {target} ({self.simulated_score}/100)"
