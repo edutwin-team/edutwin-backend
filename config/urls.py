@@ -33,6 +33,7 @@ from drf_spectacular.views import (
 def health_check(request):
     return JsonResponse({"status": "ok"})
 
+
 def csrf_api(request):
     return JsonResponse({"csrfToken": get_token(request)})
 
@@ -47,7 +48,6 @@ urlpatterns = [
     ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-
     # 2. Serves the interactive Swagger UI
     path(
         "api/docs/",
@@ -61,5 +61,5 @@ urlpatterns = [
     path("api/content/", include("content.urls")),
     path("api/simulation/", include("simulation.urls")),
     path("api/insights/", include("insights.urls")),
-    path('api/csrf/', csrf_api),
+    path("api/csrf/", csrf_api),
 ]
