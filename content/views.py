@@ -1,10 +1,10 @@
 from django.db.models import QuerySet
-from rest_framework import permissions, viewsets
+from rest_framework import  viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from .models import Answer, Course, Question, Quiz, ContentType
+from .models import Answer, Course, Question, Quiz
 from .serializers import (
     AnswerSerializer,
     CourseSerializer,
@@ -12,29 +12,64 @@ from .serializers import (
     QuizSerializer,
     QuizSubmitSerializer,
 )
-from user.permissions import IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin
+
+from .utils import export_quiz_to_csv,import_quiz_from_csv,CSVImportError
+
 
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [permissions.AllowAny]
 
-    # permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, content_type=ContentType.course)
+        serializer.save(user=self.request.user)
 
 
 class QuizViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.prefetch_related("questions__answers")
     serializer_class = QuizSerializer
-    permission_classes = [permissions.AllowAny]
-    # permission_classes = [IsAdminOrTeacherOrReadOnly, IsOwnerOrAdmin]
+
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, content_type=ContentType.quiz)
+        serializer.save(user=self.request.user)
+        
+        # export quiz csv
+    @action(detail=True, methods=["get"])
+    def export(self, request, pk=None):
+        quiz = self.get_object()
+        return export_quiz_to_csv(quiz)
 
+    #  import quiz csv
+    @action(detail=False, methods=["post"], url_path="import")
+    def import_quiz(self, request):
+        file = request.FILES.get("file")
+
+        if not file:
+            return Response(
+                {"error": "No file provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            quiz = import_quiz_from_csv(file, request.user)
+
+            return Response({
+                "id": quiz.id, #type: ignore
+                "title": quiz.title
+            }, status=status.HTTP_201_CREATED)
+
+        except CSVImportError as e:
+            return Response({
+                "error": e.message
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({
+                "error": "Erreur serveur inattendue"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    #todo : i didnt modify this , A verifier si on a besoin
     @action(detail=True, methods=["post"], url_path="submit")
     def submit(self, request, pk=None):
         quiz = Quiz.objects.get(pk=pk)
@@ -70,8 +105,6 @@ class QuizViewSet(viewsets.ModelViewSet):
 class QuestionViewSet(viewsets.ModelViewSet):  # type: ignore[override]
     queryset = Question.objects.none()
     serializer_class = QuestionSerializer
-    # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
         serializer.save(quiz_id=self.kwargs["quiz_pk"])
@@ -91,8 +124,6 @@ class QuestionViewSet(viewsets.ModelViewSet):  # type: ignore[override]
 class AnswerViewSet(viewsets.ModelViewSet):  # type: ignore[override]
     queryset = Answer.objects.none()
     serializer_class = AnswerSerializer
-    permission_classes = [permissions.AllowAny]
-    # permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(question_id=self.kwargs["question_pk"])
