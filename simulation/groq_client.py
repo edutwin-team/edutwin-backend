@@ -23,9 +23,7 @@ def _get_client() -> Groq:
     if _client is None:
         api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
-            raise EnvironmentError(
-                "GROQ_API_KEY is not set. Add it to your .env file."
-            )
+            raise EnvironmentError("GROQ_API_KEY is not set. Add it to your .env file.")
         _client = Groq(api_key=api_key)
     return _client
 
@@ -57,6 +55,7 @@ def _extract_json(text: str) -> dict | list:
 # Quiz simulation
 # ---------------------------------------------------------------------------
 
+
 def _build_twin_profile(twin) -> str:
     b = twin.behavior
     return f"""
@@ -85,7 +84,7 @@ def _build_questions_block(questions) -> str:
         answers = q.answers.all()
         lines.append(f"Q{i} [{q.difficulty_level}]: {q.text}")
         for j, a in enumerate(answers):
-            lines.append(f"  {j+1}. {a.text}")
+            lines.append(f"  {j + 1}. {a.text}")
     return "\n".join(lines)
 
 
@@ -144,9 +143,9 @@ Règles :
         raise ValueError(f"LLM returned invalid JSON: {e}\nRaw output:\n{raw}")
 
     return {
-        "questions":              questions,
-        "answers":                parsed.get("answers", []),
-        "feedback":               parsed.get("feedback", ""),
+        "questions": questions,
+        "answers": parsed.get("answers", []),
+        "feedback": parsed.get("feedback", ""),
         "simulated_time_seconds": int(parsed.get("simulated_time_seconds", 300)),
     }
 
@@ -179,9 +178,9 @@ def score_quiz_answers(questions, llm_answers: list) -> dict:
 
     return {
         "simulated_score": simulated_score,
-        "correct":         correct_count,
-        "total":           total,
-        "passed":          passed,
+        "correct": correct_count,
+        "total": total,
+        "passed": passed,
     }
 
 
@@ -212,16 +211,16 @@ def simulate_quiz_with_llm(twin, quiz) -> dict:
         "llm_answers": llm_result["answers"],  # detailed per-question reasoning
         "behavior_snapshot": {
             "comprehension_level": b.comprehension_level,
-            "motivation":          b.motivation,
-            "attention_level":     b.attention_level,
-            "memory_retention":    b.memory_retention,
-            "error_rate":          b.error_rate,
-            "fatigue_level":       b.fatigue_level,
-            "stress_level":        b.stress_level,
-            "learning_speed":      b.learning_speed,
-            "learning_style":      b.learning_style,
-            "persistence_level":   b.persistence_level,
-            "curiosity_level":     b.curiosity_level,
+            "motivation": b.motivation,
+            "attention_level": b.attention_level,
+            "memory_retention": b.memory_retention,
+            "error_rate": b.error_rate,
+            "fatigue_level": b.fatigue_level,
+            "stress_level": b.stress_level,
+            "learning_speed": b.learning_speed,
+            "learning_style": b.learning_style,
+            "persistence_level": b.persistence_level,
+            "curiosity_level": b.curiosity_level,
         },
     }
 
@@ -229,6 +228,7 @@ def simulate_quiz_with_llm(twin, quiz) -> dict:
 # ---------------------------------------------------------------------------
 # Course simulation
 # ---------------------------------------------------------------------------
+
 
 def simulate_course_with_llm(twin, course) -> dict:
     """
@@ -269,14 +269,14 @@ Règles :
 
     b = twin.behavior
     return {
-        "simulated_score":        float(parsed.get("comprehension_score", 50)),
+        "simulated_score": float(parsed.get("comprehension_score", 50)),
         "simulated_time_seconds": int(parsed.get("simulated_time_seconds", 300)),
-        "feedback":               parsed.get("feedback", ""),
+        "feedback": parsed.get("feedback", ""),
         "behavior_snapshot": {
             "comprehension_level": b.comprehension_level,
-            "motivation":          b.motivation,
-            "attention_level":     b.attention_level,
-            "curiosity_level":     b.curiosity_level,
-            "fatigue_level":       b.fatigue_level,
+            "motivation": b.motivation,
+            "attention_level": b.attention_level,
+            "curiosity_level": b.curiosity_level,
+            "fatigue_level": b.fatigue_level,
         },
     }
