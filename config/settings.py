@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "content",
     "simulation",
     "insights",
+    'dashboard',
 ]
 
 MIDDLEWARE = [
