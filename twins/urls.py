@@ -5,7 +5,7 @@ router = DefaultRouter()
 
 router.register(
     r"contexts",
-    PedagogicalContextViewSet,
+    PedagogicalContextViewSet,  
     basename="context"
 )
 

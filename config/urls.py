@@ -61,5 +61,6 @@ urlpatterns = [
     path("api/content/", include("content.urls")),
     path("api/simulation/", include("simulation.urls")),
     path("api/insights/", include("insights.urls")),
+    path('api/dashboard/', include('dashboard.urls')),
     path("api/csrf/", csrf_api),
 ]
