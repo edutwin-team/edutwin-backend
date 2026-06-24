@@ -148,7 +148,6 @@ class SimulateCourseView(APIView):
             simulated_time_seconds=result["simulated_time_seconds"],
             feedback=result["feedback"],
             behavior_snapshot=result["behavior_snapshot"],
-            answer_details=result["llm_answers"],
         )
 
         out = CourseSimulationResultSerializer(

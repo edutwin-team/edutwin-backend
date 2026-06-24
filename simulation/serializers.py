@@ -29,6 +29,7 @@ class BehaviorSnapshotSerializer(serializers.Serializer):
 
 class LLMAnswerSerializer(serializers.Serializer):
     question_index = serializers.IntegerField()
+    question_title = serializers.CharField()
     chosen_index = serializers.IntegerField()
     reasoning = serializers.CharField()
 

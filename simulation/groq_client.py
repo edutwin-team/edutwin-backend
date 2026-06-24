@@ -159,7 +159,8 @@ def take_quiz_as_twin(twin, quiz) -> dict:
 
     Returns:
     {
-        "answers": [{"question_index": 1, "chosen_index": 2, "reasoning": "..."}],
+        "questions": [...],
+        "answers": [{"question_index": 1, "chosen_index": 2, "reasoning": "...", "question_title": "..."}],
         "feedback": "...",
         "simulated_time_seconds": int
     }
@@ -185,6 +186,7 @@ Réponds en JSON structuré UNIQUEMENT selon ce format (pas de texte avant ni ap
 {{
   "answers": [
     {{
+      "question_title": "Foo",
       "question_index": 1,
       "chosen_index": 2,
       "reasoning": "Courte explication de pourquoi tu as choisi cette réponse, en restant cohérent avec ton profil."
@@ -195,21 +197,49 @@ Réponds en JSON structuré UNIQUEMENT selon ce format (pas de texte avant ni ap
 }}
 ```
 Règles :
-- chosen_index correspond au numéro de la réponse (1, 2, 3...) dans la liste affichée.
-- simulated_time_seconds doit refléter ta vitesse d'apprentissage ({twin.behavior.learning_speed}/100) et le nombre de questions ({len(questions)}).
-- Sois cohérent avec ton profil : fatigue={twin.behavior.fatigue_level}, erreur={twin.behavior.error_rate}, compréhension={twin.behavior.comprehension_level}.
-""".strip()
 
-    raw = _chat(prompt, max_tokens=1500, temperature=0.6)
+    chosen_index correspond au numéro de la réponse (1, 2, 3...) dans la liste affichée.
+    question_index correspond à l'ID de la question.
+    simulated_time_seconds doit refléter ta vitesse d'apprentissage ({twin.behavior.learning_speed}/100) et le nombre de questions ({len(questions)}).
+    Sois cohérent avec ton profil : fatigue={twin.behavior.fatigue_level}, erreur={twin.behavior.error_rate}, compréhension={twin.behavior.comprehension_level}.
+    """.strip()
+
+    raw = _chat(prompt, max_tokens=1500, temperature=0.2)
 
     try:
         parsed = _extract_json(raw)
     except (ValueError, json.JSONDecodeError) as e:
         raise ValueError(f"LLM returned invalid JSON: {e}\nRaw output:\n{raw}")
 
+    # --- NEW ENRICHMENT BLOCK ---
+    answers = parsed.get("answers", [])
+
+    # Enrichir chaque réponse avec le texte de la question
+    enriched_answers = []
+    for ans in answers:
+        q_index = ans.get("question_index")
+
+        # 1. Try to find by exact DB ID
+        question = next((q for q in questions if q.id == q_index), None)
+
+        # 2. Fallback: LLMs often use 1-based index (1, 2, 3) instead of actual DB IDs
+        if not question and isinstance(q_index, int) and 1 <= q_index <= len(questions):
+            question = questions[q_index - 1]
+
+        if question:
+            # Safely get text (falls back to title, then to a generic string)
+            ans["question_title"] = getattr(
+                question, "text", getattr(question, "title", f"Question {q_index}")
+            )
+        else:
+            ans["question_title"] = f"Question {q_index}"  # fallback
+
+        enriched_answers.append(ans)
+    # -----------------------------
+
     return {
         "questions": questions,
-        "answers": parsed.get("answers", []),
+        "answers": enriched_answers,  # ← maintenant avec question_title
         "feedback": parsed.get("feedback", ""),
         "simulated_time_seconds": int(parsed.get("simulated_time_seconds", 300)),
     }
@@ -273,6 +303,7 @@ def simulate_quiz_with_llm(twin, quiz) -> dict:
         **score_data,
         "simulated_time_seconds": llm_result["simulated_time_seconds"],
         "feedback": llm_result["feedback"],
+        "questions": llm_result["questions"],
         "llm_answers": llm_result["answers"],  # detailed per-question reasoning
         "behavior_snapshot": {
             "comprehension_level": b.comprehension_level,
