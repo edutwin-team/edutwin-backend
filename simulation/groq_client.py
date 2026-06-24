@@ -13,7 +13,7 @@ Flow for course:
 import os
 import json
 import re
-from groq import Groq
+from groq import Groq, BadRequestError, RateLimitError
 
 _client: Groq | None = None
 
@@ -30,13 +30,43 @@ def _get_client() -> Groq:
 
 def _chat(prompt: str, max_tokens: int = 1000, temperature: float = 0.5) -> str:
     client = _get_client()
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens,
-        temperature=temperature,
-    )
-    return (response.choices[0].message.content or "").strip()
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    except BadRequestError as e:
+        # Vérifie si l'erreur est liée à la taille du contexte
+        if (
+            "context_length" in str(e).lower()
+            or "maximum context length" in str(e).lower()
+        ):
+            print(
+                f"❌ Dépassement de la fenêtre de contexte (prompt + {max_tokens} tokens de sortie)."
+            )
+            print(f"Détails : {e}")
+            # Ici, vous pouvez réduire le prompt ou diminuer max_tokens
+        else:
+            print(f"❌ Erreur de requête (400) : {e}")
+        raise  # ou retournez un message d'erreur personnalisé
+
+    except RateLimitError as e:
+        # Cette exception couvre à la fois :
+        # - le dépassement de requêtes/min (trop de calls)
+        # - le dépassement du quota de tokens (limite journalière/mensuelle atteinte)
+        print(f"⛔ Limite de taux ou quota de tokens dépassé(e).")
+        print(f"Détails : {e}")
+        # Vous pouvez examiner le corps de l'erreur pour plus de précision :
+        # if "quota" in str(e).lower(): ...
+        raise
+
+    except groq.APIError as e:
+        print(f"⚠️ Erreur API générique : {e}")
+        raise
 
 
 def _extract_json(text: str) -> dict | list:

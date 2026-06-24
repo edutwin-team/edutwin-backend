@@ -35,6 +35,7 @@ class SimulationResult(models.Model):
         blank=True,
         related_name="simulation_results",
     )
+    answer_details = models.JSONField(default=list, blank=True)
     course = models.ForeignKey(
         "content.Course",
         on_delete=models.SET_NULL,

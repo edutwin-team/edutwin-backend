@@ -47,6 +47,7 @@ class QuizSimulationResultSerializer(serializers.Serializer):
     feedback = serializers.CharField()
     llm_answers = LLMAnswerSerializer(many=True, required=False)
     behavior_snapshot = BehaviorSnapshotSerializer()
+    answers_details = serializers.JSONField(required=False)
 
 
 class CourseSimulationResultSerializer(serializers.Serializer):
