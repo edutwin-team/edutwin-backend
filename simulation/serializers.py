@@ -32,6 +32,10 @@ class LLMAnswerSerializer(serializers.Serializer):
     question_title = serializers.CharField()
     chosen_index = serializers.IntegerField()
     reasoning = serializers.CharField()
+    chosen_text = serializers.CharField(required=False, allow_null=True)
+    correct_text = serializers.CharField(required=False, allow_null=True)
+    is_correct = serializers.BooleanField(required=False)
+    is_valid_choice = serializers.BooleanField(required=False)  # ← ajoute si souhaité
 
 
 class QuizSimulationResultSerializer(serializers.Serializer):

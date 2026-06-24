@@ -215,31 +215,57 @@ Règles :
     answers = parsed.get("answers", [])
 
     # Enrichir chaque réponse avec le texte de la question
+    raw_answers = parsed.get("answers", [])
     enriched_answers = []
-    for ans in answers:
+    for ans in raw_answers:
         q_index = ans.get("question_index")
+        chosen_index = ans.get("chosen_index")
 
-        # 1. Try to find by exact DB ID
+        # 1. Trouver la question (par ID réel, puis fallback 1-based)
         question = next((q for q in questions if q.id == q_index), None)
-
-        # 2. Fallback: LLMs often use 1-based index (1, 2, 3) instead of actual DB IDs
         if not question and isinstance(q_index, int) and 1 <= q_index <= len(questions):
             question = questions[q_index - 1]
 
         if question:
-            # Safely get text (falls back to title, then to a generic string)
-            ans["question_title"] = getattr(
-                question, "text", getattr(question, "title", f"Question {q_index}")
+            # Texte de la question
+            ans["question_title"] = question.text
+            question_answers = list(question.answers.all())
+
+            # --- Réponse choisie ---
+            if isinstance(chosen_index, int) and 1 <= chosen_index <= len(
+                question_answers
+            ):
+                chosen_answer = question_answers[chosen_index - 1]
+                ans["chosen_text"] = chosen_answer.text
+                ans["is_correct"] = chosen_answer.is_correct
+                ans["is_valid_choice"] = True
+            else:
+                # Index invalide : message explicatif
+                ans["chosen_text"] = (
+                    f"Index {chosen_index} invalide (max {len(question_answers)})"
+                )
+                ans["is_correct"] = False
+                ans["is_valid_choice"] = False
+
+            # --- Réponse correcte ---
+            correct_answer = next((a for a in question_answers if a.is_correct), None)
+            ans["correct_text"] = (
+                correct_answer.text if correct_answer else "Aucune réponse correcte"
             )
+
         else:
-            ans["question_title"] = f"Question {q_index}"  # fallback
+            # Question non trouvée
+            ans["question_title"] = f"Question {q_index} (inconnue)"
+            ans["chosen_text"] = "Question non trouvée"
+            ans["correct_text"] = "Question non trouvée"
+            ans["is_correct"] = False
+            ans["is_valid_choice"] = False
 
         enriched_answers.append(ans)
-    # -----------------------------
 
     return {
         "questions": questions,
-        "answers": enriched_answers,  # ← maintenant avec question_title
+        "answers": enriched_answers,  # ← contient maintenant tous les champs
         "feedback": parsed.get("feedback", ""),
         "simulated_time_seconds": int(parsed.get("simulated_time_seconds", 300)),
     }
