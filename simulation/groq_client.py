@@ -13,7 +13,7 @@ Flow for course:
 import os
 import json
 import re
-from groq import Groq
+from groq import Groq, BadRequestError, RateLimitError
 
 _client: Groq | None = None
 
@@ -28,15 +28,45 @@ def _get_client() -> Groq:
     return _client
 
 
-def _chat(prompt: str, max_tokens: int = 1000, temperature: float = 0.5) -> str:
+def _chat(prompt: str, max_tokens: int = 1000, temperature: float = 0.2) -> str:
     client = _get_client()
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens,
-        temperature=temperature,
-    )
-    return (response.choices[0].message.content or "").strip()
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    except BadRequestError as e:
+        # Vérifie si l'erreur est liée à la taille du contexte
+        if (
+            "context_length" in str(e).lower()
+            or "maximum context length" in str(e).lower()
+        ):
+            print(
+                f"❌ Dépassement de la fenêtre de contexte (prompt + {max_tokens} tokens de sortie)."
+            )
+            print(f"Détails : {e}")
+            # Ici, vous pouvez réduire le prompt ou diminuer max_tokens
+        else:
+            print(f"❌ Erreur de requête (400) : {e}")
+        raise  # ou retournez un message d'erreur personnalisé
+
+    except RateLimitError as e:
+        # Cette exception couvre à la fois :
+        # - le dépassement de requêtes/min (trop de calls)
+        # - le dépassement du quota de tokens (limite journalière/mensuelle atteinte)
+        print(f"⛔ Limite de taux ou quota de tokens dépassé(e).")
+        print(f"Détails : {e}")
+        # Vous pouvez examiner le corps de l'erreur pour plus de précision :
+        # if "quota" in str(e).lower(): ...
+        raise
+
+    except groq.APIError as e:
+        print(f"⚠️ Erreur API générique : {e}")
+        raise
 
 
 def _extract_json(text: str) -> dict | list:
@@ -57,10 +87,38 @@ def _extract_json(text: str) -> dict | list:
 
 
 def _build_twin_profile(twin) -> str:
+    """
+    Construit un profil complet du twin incluant :
+      - le contexte pédagogique (PedagogicalContext)
+      - les informations générales du twin (âge, moyenne, description)
+      - le comportement (Behavior)
+    """
     b = twin.behavior
+    context = twin.context  # relation ForeignKey vers PedagogicalContext
+
+    # Récupérer les objectifs du contexte
+    objectives = list(context.objectives.values_list("label", flat=True))
+    objectives_text = ", ".join(objectives) if objectives else "Aucun objectif spécifié"
+
     return f"""
-Tu incarnes un élève numérique avec ce profil exact :
-- Nom : {twin.name}
+Tu incarnes un élève numérique nommé {twin.name}.
+
+=== CONTEXTE PÉDAGOGIQUE ===
+- Contexte : {context.name}
+- Matière : {context.subject}
+- Niveau : {context.level}
+- Établissement : {context.school}
+- Pays : {context.country}
+- Année académique : {context.academic_year}
+- Description du contexte : {context.description or "Non renseignée"}
+- Objectifs pédagogiques : {objectives_text}
+
+=== PROFIL DE L'ÉLÈVE ===
+- Âge : {twin.age} ans
+- Moyenne générale : {twin.average_grade}/20
+- Description personnelle : {twin.description or "Non renseignée"}
+
+=== COMPORTEMENT DE L'ÉLÈVE ===
 - Niveau de compréhension : {b.comprehension_level}/100
 - Motivation : {b.motivation}/100
 - Style d'apprentissage : {b.get_learning_style_display()}
@@ -72,9 +130,16 @@ Tu incarnes un élève numérique avec ce profil exact :
 - Persévérance : {b.persistence_level}/100
 - Curiosité : {b.curiosity_level}/100
 - Autonomie : {b.autonomy_level}/100
-Tes réponses doivent être cohérentes avec ce profil.
-Un élève fatigué ou stressé fait plus d'erreurs.
-Un élève très motivé et curieux lit attentivement les options.
+- Niveau d'attention : {b.attention_level}/100
+- Type de contenu préféré : {b.get_preferred_content_type_display()}
+- Fréquence de questions : {b.question_frequency}
+- Commentaire : {b.comment or "Aucun"}
+
+IMPORTANT : Tes réponses doivent être cohérentes avec ce profil complet.
+- Un élève fatigué ou stressé fait plus d'erreurs.
+- Un élève très motivé et curieux lit attentivement les options.
+- Un élève avec une bonne moyenne et une bonne compréhension répondra mieux.
+- Le contexte pédagogique influence la façon dont tu abordes les questions.
 """.strip()
 
 
@@ -94,7 +159,8 @@ def take_quiz_as_twin(twin, quiz) -> dict:
 
     Returns:
     {
-        "answers": [{"question_index": 1, "chosen_index": 2, "reasoning": "..."}],
+        "questions": [...],
+        "answers": [{"question_index": 1, "chosen_index": 2, "reasoning": "...", "question_title": "..."}],
         "feedback": "...",
         "simulated_time_seconds": int
     }
@@ -120,6 +186,7 @@ Réponds en JSON structuré UNIQUEMENT selon ce format (pas de texte avant ni ap
 {{
   "answers": [
     {{
+      "question_title": "Foo",
       "question_index": 1,
       "chosen_index": 2,
       "reasoning": "Courte explication de pourquoi tu as choisi cette réponse, en restant cohérent avec ton profil."
@@ -130,21 +197,49 @@ Réponds en JSON structuré UNIQUEMENT selon ce format (pas de texte avant ni ap
 }}
 ```
 Règles :
-- chosen_index correspond au numéro de la réponse (1, 2, 3...) dans la liste affichée.
-- simulated_time_seconds doit refléter ta vitesse d'apprentissage ({twin.behavior.learning_speed}/100) et le nombre de questions ({len(questions)}).
-- Sois cohérent avec ton profil : fatigue={twin.behavior.fatigue_level}, erreur={twin.behavior.error_rate}, compréhension={twin.behavior.comprehension_level}.
-""".strip()
 
-    raw = _chat(prompt, max_tokens=1500, temperature=0.6)
+    chosen_index correspond au numéro de la réponse (1, 2, 3...) dans la liste affichée.
+    question_index correspond à l'ID de la question.
+    simulated_time_seconds doit refléter ta vitesse d'apprentissage ({twin.behavior.learning_speed}/100) et le nombre de questions ({len(questions)}).
+    Sois cohérent avec ton profil : fatigue={twin.behavior.fatigue_level}, erreur={twin.behavior.error_rate}, compréhension={twin.behavior.comprehension_level}.
+    """.strip()
+
+    raw = _chat(prompt, max_tokens=1500, temperature=0.2)
 
     try:
         parsed = _extract_json(raw)
     except (ValueError, json.JSONDecodeError) as e:
         raise ValueError(f"LLM returned invalid JSON: {e}\nRaw output:\n{raw}")
 
+    # --- NEW ENRICHMENT BLOCK ---
+    answers = parsed.get("answers", [])
+
+    # Enrichir chaque réponse avec le texte de la question
+    enriched_answers = []
+    for ans in answers:
+        q_index = ans.get("question_index")
+
+        # 1. Try to find by exact DB ID
+        question = next((q for q in questions if q.id == q_index), None)
+
+        # 2. Fallback: LLMs often use 1-based index (1, 2, 3) instead of actual DB IDs
+        if not question and isinstance(q_index, int) and 1 <= q_index <= len(questions):
+            question = questions[q_index - 1]
+
+        if question:
+            # Safely get text (falls back to title, then to a generic string)
+            ans["question_title"] = getattr(
+                question, "text", getattr(question, "title", f"Question {q_index}")
+            )
+        else:
+            ans["question_title"] = f"Question {q_index}"  # fallback
+
+        enriched_answers.append(ans)
+    # -----------------------------
+
     return {
         "questions": questions,
-        "answers": parsed.get("answers", []),
+        "answers": enriched_answers,  # ← maintenant avec question_title
         "feedback": parsed.get("feedback", ""),
         "simulated_time_seconds": int(parsed.get("simulated_time_seconds", 300)),
     }
@@ -208,6 +303,7 @@ def simulate_quiz_with_llm(twin, quiz) -> dict:
         **score_data,
         "simulated_time_seconds": llm_result["simulated_time_seconds"],
         "feedback": llm_result["feedback"],
+        "questions": llm_result["questions"],
         "llm_answers": llm_result["answers"],  # detailed per-question reasoning
         "behavior_snapshot": {
             "comprehension_level": b.comprehension_level,
