@@ -28,7 +28,7 @@ def _get_client() -> Groq:
     return _client
 
 
-def _chat(prompt: str, max_tokens: int = 1000, temperature: float = 0.5) -> str:
+def _chat(prompt: str, max_tokens: int = 1000, temperature: float = 0.2) -> str:
     client = _get_client()
     try:
         response = client.chat.completions.create(
@@ -87,10 +87,38 @@ def _extract_json(text: str) -> dict | list:
 
 
 def _build_twin_profile(twin) -> str:
+    """
+    Construit un profil complet du twin incluant :
+      - le contexte pédagogique (PedagogicalContext)
+      - les informations générales du twin (âge, moyenne, description)
+      - le comportement (Behavior)
+    """
     b = twin.behavior
+    context = twin.context  # relation ForeignKey vers PedagogicalContext
+
+    # Récupérer les objectifs du contexte
+    objectives = list(context.objectives.values_list("label", flat=True))
+    objectives_text = ", ".join(objectives) if objectives else "Aucun objectif spécifié"
+
     return f"""
-Tu incarnes un élève numérique avec ce profil exact :
-- Nom : {twin.name}
+Tu incarnes un élève numérique nommé {twin.name}.
+
+=== CONTEXTE PÉDAGOGIQUE ===
+- Contexte : {context.name}
+- Matière : {context.subject}
+- Niveau : {context.level}
+- Établissement : {context.school}
+- Pays : {context.country}
+- Année académique : {context.academic_year}
+- Description du contexte : {context.description or "Non renseignée"}
+- Objectifs pédagogiques : {objectives_text}
+
+=== PROFIL DE L'ÉLÈVE ===
+- Âge : {twin.age} ans
+- Moyenne générale : {twin.average_grade}/20
+- Description personnelle : {twin.description or "Non renseignée"}
+
+=== COMPORTEMENT DE L'ÉLÈVE ===
 - Niveau de compréhension : {b.comprehension_level}/100
 - Motivation : {b.motivation}/100
 - Style d'apprentissage : {b.get_learning_style_display()}
@@ -102,9 +130,16 @@ Tu incarnes un élève numérique avec ce profil exact :
 - Persévérance : {b.persistence_level}/100
 - Curiosité : {b.curiosity_level}/100
 - Autonomie : {b.autonomy_level}/100
-Tes réponses doivent être cohérentes avec ce profil.
-Un élève fatigué ou stressé fait plus d'erreurs.
-Un élève très motivé et curieux lit attentivement les options.
+- Niveau d'attention : {b.attention_level}/100
+- Type de contenu préféré : {b.get_preferred_content_type_display()}
+- Fréquence de questions : {b.question_frequency}
+- Commentaire : {b.comment or "Aucun"}
+
+IMPORTANT : Tes réponses doivent être cohérentes avec ce profil complet.
+- Un élève fatigué ou stressé fait plus d'erreurs.
+- Un élève très motivé et curieux lit attentivement les options.
+- Un élève avec une bonne moyenne et une bonne compréhension répondra mieux.
+- Le contexte pédagogique influence la façon dont tu abordes les questions.
 """.strip()
 
 

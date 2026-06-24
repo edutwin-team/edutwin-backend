@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-
+from drf_spectacular.utils import extend_schema
 from twins.models import DigitalTwin
 from content.models import Quiz, Course
 
@@ -19,6 +19,10 @@ from .serializers import (
 from .groq_client import simulate_quiz_with_llm, simulate_course_with_llm
 
 
+@extend_schema(
+    request=QuizSimulationRequestSerializer,
+    responses={201: QuizSimulationResultSerializer},
+)
 class SimulateQuizView(APIView):
     """
     POST /api/simulations/quiz/
@@ -73,6 +77,7 @@ class SimulateQuizView(APIView):
             total=result["total"],
             feedback=result["feedback"],
             behavior_snapshot=result["behavior_snapshot"],
+            answer_details=result["llm_answers"],
         )
 
         out = QuizSimulationResultSerializer(
@@ -89,6 +94,10 @@ class SimulateQuizView(APIView):
         return Response(out.data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    request=QuizSimulationRequestSerializer,
+    responses={201: QuizSimulationResultSerializer},
+)
 class SimulateCourseView(APIView):
     """
     POST /api/simulations/course/

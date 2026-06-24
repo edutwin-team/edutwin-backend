@@ -47,7 +47,7 @@ class QuizSimulationResultSerializer(serializers.Serializer):
     feedback = serializers.CharField()
     llm_answers = LLMAnswerSerializer(many=True, required=False)
     behavior_snapshot = BehaviorSnapshotSerializer()
-    answers_details = serializers.JSONField(required=False)
+    answer_details = serializers.JSONField(required=False)
 
 
 class CourseSimulationResultSerializer(serializers.Serializer):
@@ -73,19 +73,4 @@ class SimulationResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SimulationResult
-        fields = [
-            "id",
-            "simulation_type",
-            "twin_name",
-            "quiz_title",
-            "course_title",
-            "simulated_score",
-            "simulated_time_seconds",
-            "passed",
-            "correct",
-            "total",
-            "feedback",
-            "behavior_snapshot",
-            "created_at",
-        ]
-        read_only_fields = fields
+        fields = "__all__"
