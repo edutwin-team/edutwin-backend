@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import User
+from .models import User, EducationalProfile
 from .serializers import UserSerializer
 from django.contrib.auth import update_session_auth_hash
 from .tokens import account_activation_token
@@ -58,7 +58,7 @@ def activate_view(request, uidb64, token):
 def register_view(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save() 
+        user = serializer.save()
         # send_verification_email(user, request)
 
         return Response(
@@ -110,7 +110,7 @@ def logout_view(request):
 
 
 # put and get request to user data
-@extend_schema(responses={200: UserSerializer})
+@extend_schema(request=UserSerializer, responses={200: UserSerializer})
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
 def user_view(request):
