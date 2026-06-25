@@ -1,0 +1,81 @@
+from rest_framework import serializers
+from .models import SimulationResult
+
+
+class QuizSimulationRequestSerializer(serializers.Serializer):
+    twin_id = serializers.IntegerField()
+    quiz_id = serializers.IntegerField()
+
+
+class CourseSimulationRequestSerializer(serializers.Serializer):
+    twin_id = serializers.IntegerField()
+    course_id = serializers.IntegerField()
+
+
+class BehaviorSnapshotSerializer(serializers.Serializer):
+    comprehension_level = serializers.IntegerField()
+    motivation = serializers.IntegerField()
+    fatigue_level = serializers.IntegerField()
+    attention_level = serializers.IntegerField(required=False)
+    memory_retention = serializers.IntegerField(required=False)
+    error_rate = serializers.IntegerField(required=False)
+    stress_level = serializers.IntegerField(required=False)
+    learning_speed = serializers.IntegerField(required=False)
+    learning_style = serializers.CharField(required=False)
+    curiosity_level = serializers.IntegerField(required=False)
+    persistence_level = serializers.IntegerField(required=False)
+    autonomy_level = serializers.IntegerField(required=False)
+
+
+class LLMAnswerSerializer(serializers.Serializer):
+    question_index = serializers.IntegerField()
+    question_title = serializers.CharField()
+    chosen_index = serializers.IntegerField()
+    reasoning = serializers.CharField()
+    chosen_text = serializers.CharField(required=False, allow_null=True)
+    correct_text = serializers.CharField(required=False, allow_null=True)
+    is_correct = serializers.BooleanField(required=False)
+    is_valid_choice = serializers.BooleanField(required=False)  # ← ajoute si souhaité
+
+
+class QuizSimulationResultSerializer(serializers.Serializer):
+    result_id = serializers.IntegerField(required=False)
+    twin_id = serializers.IntegerField()
+    twin_name = serializers.CharField()
+    quiz_id = serializers.IntegerField()
+    quiz_title = serializers.CharField()
+    simulated_score = serializers.FloatField()
+    correct = serializers.IntegerField()
+    total = serializers.IntegerField()
+    simulated_time_seconds = serializers.IntegerField()
+    passed = serializers.BooleanField()
+    feedback = serializers.CharField()
+    llm_answers = LLMAnswerSerializer(many=True, required=False)
+    behavior_snapshot = BehaviorSnapshotSerializer()
+    answer_details = serializers.JSONField(required=False)
+
+
+class CourseSimulationResultSerializer(serializers.Serializer):
+    result_id = serializers.IntegerField(required=False)
+    twin_id = serializers.IntegerField()
+    twin_name = serializers.CharField()
+    course_id = serializers.IntegerField()
+    course_title = serializers.CharField()
+    simulated_score = serializers.FloatField()
+    simulated_time_seconds = serializers.IntegerField()
+    feedback = serializers.CharField()
+    behavior_snapshot = BehaviorSnapshotSerializer()
+
+
+class SimulationResultSerializer(serializers.ModelSerializer):
+    twin_name = serializers.CharField(source="twin.name", read_only=True)
+    quiz_title = serializers.CharField(
+        source="quiz.title", read_only=True, default=None
+    )
+    course_title = serializers.CharField(
+        source="course.title", read_only=True, default=None
+    )
+
+    class Meta:
+        model = SimulationResult
+        fields = "__all__"

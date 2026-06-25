@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo "🛡️ check .env files..."
+
+if git diff --cached --name-only | grep -E '\.env|meta\.env' > /dev/null; then
+  echo "🚫 COMMIT REFUSÉ : fichier .env détecté"
+  exit 1
+fi
