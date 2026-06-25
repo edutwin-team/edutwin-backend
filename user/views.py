@@ -183,29 +183,3 @@ def delete_user_view(request):
     user.delete()
     logout(request)  # log the user out after deletion
     return Response({"message": "User deleted successfully"})
-
-
-# GET PUT PATCH De l'educationnal profile
-#
-#
-#
-@api_view(["GET", "PUT", "PATCH"])
-@permission_classes([IsAuthenticated])
-def educational_profile_view(request):
-    user = request.user
-
-    # Récupérer ou créer le profil s'il n'existe pas (pour le PUT/PATCH)
-    profile, created = EducationalProfile.objects.get_or_create(user=user)
-
-    if request.method == "GET":
-        serializer = EducationalProfileSerializer(profile)
-        return Response(serializer.data)
-
-    elif request.method in ["PUT", "PATCH"]:
-        serializer = EducationalProfileSerializer(
-            profile, data=request.data, partial=(request.method == "PATCH")
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
