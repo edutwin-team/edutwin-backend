@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import User
+from .models import User, EducationalProfile
 from .serializers import UserSerializer
 from django.contrib.auth import update_session_auth_hash
 from .tokens import account_activation_token
@@ -58,7 +58,7 @@ def activate_view(request, uidb64, token):
 def register_view(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save() 
+        user = serializer.save()
         # send_verification_email(user, request)
 
         return Response(
@@ -110,7 +110,7 @@ def logout_view(request):
 
 
 # put and get request to user data
-@extend_schema(responses={200: UserSerializer})
+@extend_schema(request=UserSerializer, responses={200: UserSerializer})
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
 def user_view(request):
@@ -183,3 +183,29 @@ def delete_user_view(request):
     user.delete()
     logout(request)  # log the user out after deletion
     return Response({"message": "User deleted successfully"})
+
+
+# GET PUT PATCH De l'educationnal profile
+#
+#
+#
+@api_view(["GET", "PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def educational_profile_view(request):
+    user = request.user
+
+    # Récupérer ou créer le profil s'il n'existe pas (pour le PUT/PATCH)
+    profile, created = EducationalProfile.objects.get_or_create(user=user)
+
+    if request.method == "GET":
+        serializer = EducationalProfileSerializer(profile)
+        return Response(serializer.data)
+
+    elif request.method in ["PUT", "PATCH"]:
+        serializer = EducationalProfileSerializer(
+            profile, data=request.data, partial=(request.method == "PATCH")
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
