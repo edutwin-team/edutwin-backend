@@ -29,13 +29,12 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-change-me")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_PRODUCTION
 
-ALLOWED_HOSTS = []
 if IS_PRODUCTION:
-    # Render fournit un domaine .onrender.com, ou tu peux mettre ton domaine custom
-    # Ex: "edutwin.onrender.com,api.edutwin.com"
+    # En prod, on lit la variable. Par défaut, on autorise tous les sous-domaines Render
     allowed_hosts_env = os.getenv("ALLOWED_HOSTS", ".onrender.com")
     ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(",")]
 else:
+    # En dev, on autorise juste le local
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
@@ -145,22 +144,28 @@ REST_FRAMEWORK = {
 }
 
 # CORS & CSRF : On les rend dynamiques pour la prod
-DEFAULT_FRONTEND_URL = "http://localhost:5173"
-FRONTEND_URL = os.getenv("FRONTEND_URL", DEFAULT_FRONTEND_URL)
+if IS_PRODUCTION:
+    # En prod, on lit depuis les variables d'environnement
+    # .rstrip('/') supprime automatiquement le slash de fin s'il y en a un (pour éviter l'erreur CORS E014)
+    cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+    csrf_env = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    FRONTEND_URL,
-]
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    FRONTEND_URL,
-]
+    CORS_ALLOWED_ORIGINS = [
+        url.strip().rstrip("/") for url in cors_env.split(",") if url.strip()
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        url.strip().rstrip("/") for url in csrf_env.split(",") if url.strip()
+    ]
+else:
+    # En dev, valeurs par défaut
+    CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
 CORS_ALLOW_CREDENTIALS = True
 
 # Les cookies doivent être sécurisés (HTTPS) en production
-SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
-CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = IS_PRODUCTION  # True en prod, False en dev
 CSRF_COOKIE_SECURE = IS_PRODUCTION  # True en prod, False en dev
 
