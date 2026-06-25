@@ -71,7 +71,7 @@ jobs:
         tags: ${{ env.DOCKER_IMAGE }}:${{ env.TAG }}
 
   # ---------------------------------------------------------
-  # JOB 3 : DEPLOY
+  #DEPLOY
   # ---------------------------------------------------------
   deploy:
     name: Deploy to Render
