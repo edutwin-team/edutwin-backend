@@ -27,7 +27,7 @@ if IS_PRODUCTION and not os.getenv("SECRET_KEY"):
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", True)
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 if IS_PRODUCTION:
     # En prod, on lit la variable. Par défaut, on autorise tous les sous-domaines Render
