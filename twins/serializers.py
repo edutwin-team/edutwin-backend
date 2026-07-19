@@ -31,7 +31,7 @@ class PedagogicalContextSerializer(serializers.ModelSerializer):
         read_only_fields = ["user"]
 
     def get_twins(self, obj):
-        return 0
+        return DigitalTwin.objects.filter(context=obj).count()
 
     def create(self, validated_data):
         objectives_data = validated_data.pop("objectives", [])
