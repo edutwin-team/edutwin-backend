@@ -30,7 +30,7 @@ class QuizViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.all()
     serializer_class = QuizSerializer
     def get_queryset(self):
-        return Quiz.objects.filter(user=self.request.user)
+        return Quiz.objects.filter(user=self.request.user).order_by("id")
 
 
     def perform_create(self, serializer):
