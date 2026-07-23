@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from groq import APIError, BadRequestError, RateLimitError
 from rest_framework import status
-
+from content.models import Quiz
 from config.factories import (
     BaseAPITest,
     make_behavior,
