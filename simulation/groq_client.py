@@ -189,7 +189,8 @@ Réponds en JSON structuré UNIQUEMENT selon ce format (pas de texte avant ni ap
       "question_title": "Foo",
       "question_index": 1,
       "chosen_index": 2,
-      "reasoning": "Courte explication de pourquoi tu as choisi cette réponse, en restant cohérent avec ton profil."
+      "reasoning": "Courte explication de pourquoi tu as choisi cette réponse, en restant cohérent avec ton profil.",
+      "improvement": "Axe d'amélioration concret et actionnable pour cette question : quelle notion réviser, quelle méthode appliquer, ou quel type d'exercice pratiquer. 1-2 phrases."
     }}
   ],
   "simulated_time_seconds": 300,
@@ -200,6 +201,7 @@ Règles :
 
     chosen_index correspond au numéro de la réponse (1, 2, 3...) dans la liste affichée.
     question_index correspond à l'ID de la question.
+    improvement est TOUJOURS renseigné, même si la réponse est correcte (dans ce cas : comment consolider ou aller plus loin sur cette notion).
     simulated_time_seconds doit refléter ta vitesse d'apprentissage ({twin.behavior.learning_speed}/100) et le nombre de questions ({len(questions)}).
     Sois cohérent avec ton profil : fatigue={twin.behavior.fatigue_level}, erreur={twin.behavior.error_rate}, compréhension={twin.behavior.comprehension_level}.
     """.strip()
@@ -220,6 +222,9 @@ Règles :
     for ans in raw_answers:
         q_index = ans.get("question_index")
         chosen_index = ans.get("chosen_index")
+
+        # Axe d'amélioration : toujours présent, même si le LLM l'a omis
+        ans.setdefault("improvement", "")
 
         # 1. Trouver la question (par ID réel, puis fallback 1-based)
         question = next((q for q in questions if q.id == q_index), None)
