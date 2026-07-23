@@ -61,12 +61,21 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
 
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt coverage
 
-      # user/test.py + */tests.py : on force les 2 patterns
-      - name: Run Tests
+      - name: Run Tests + coverage
         run: |
-          python manage.py test -v 2 --pattern="test*.py"
+          coverage run manage.py test -v 2
+          coverage report        # échoue si < fail_under (.coveragerc)
+          coverage xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 7
 
   # ---------------------------------------------------------
   # JOB 3 : BUILD & PUSH
