@@ -213,15 +213,14 @@ class ChatErrorHandlingTests(TestCase):
             with self.assertRaises(RateLimitError):
                 groq_client._chat("prompt")
 
-    def test_generic_api_error_hits_undefined_name(self):
-        """⚠️ BUG connu : `except groq.APIError` sans `import groq` → NameError."""
+    def test_generic_api_error_is_reraised(self):
         exc = APIError(
             "boom", request=httpx.Request("POST", "https://api.groq.com"), body=None
         )
         with patch.object(
             groq_client, "_get_client", return_value=self._client_raising(exc)
         ):
-            with self.assertRaises(NameError):
+            with self.assertRaises(APIError):
                 groq_client._chat("prompt")
 
 

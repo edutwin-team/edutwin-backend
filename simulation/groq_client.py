@@ -13,6 +13,7 @@ Flow for course:
 import os
 import json
 import re
+import groq
 from groq import Groq, BadRequestError, RateLimitError
 
 _client: Groq | None = None
