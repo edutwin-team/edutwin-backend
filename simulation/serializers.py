@@ -32,6 +32,7 @@ class LLMAnswerSerializer(serializers.Serializer):
     question_title = serializers.CharField()
     chosen_index = serializers.IntegerField()
     reasoning = serializers.CharField()
+    improvement = serializers.CharField(required=False, allow_blank=True, default="")
     chosen_text = serializers.CharField(required=False, allow_null=True)
     correct_text = serializers.CharField(required=False, allow_null=True)
     is_correct = serializers.BooleanField(required=False)

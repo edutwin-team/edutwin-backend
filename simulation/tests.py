@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from groq import APIError, BadRequestError, RateLimitError
 from rest_framework import status
-
+from content.models import Quiz
 from config.factories import (
     BaseAPITest,
     make_behavior,
@@ -28,6 +28,7 @@ FAKE_QUIZ_JSON = json.dumps(
                 "question_index": 1,
                 "chosen_index": 1,
                 "reasoning": "C'est évident",
+                "improvement": "Consolider les additions simples avec des exercices chronométrés.",
             }
         ],
         "simulated_time_seconds": 120,
@@ -36,7 +37,11 @@ FAKE_QUIZ_JSON = json.dumps(
 )
 
 FAKE_COURSE_JSON = json.dumps(
-    {"comprehension_score": 72, "simulated_time_seconds": 240, "feedback": "Cours clair."}
+    {
+        "comprehension_score": 72,
+        "simulated_time_seconds": 240,
+        "feedback": "Cours clair.",
+    }
 )
 
 
@@ -69,8 +74,12 @@ class EngineTests(TestCase):
         self.assertEqual(
             set(result),
             {
-                "simulated_score", "correct", "total",
-                "simulated_time_seconds", "passed", "behavior_snapshot",
+                "simulated_score",
+                "correct",
+                "total",
+                "simulated_time_seconds",
+                "passed",
+                "behavior_snapshot",
             },
         )
         self.assertGreaterEqual(result["simulated_score"], 0)
@@ -82,8 +91,14 @@ class EngineTests(TestCase):
     def test_simulate_quiz_score_is_clamped_for_terrible_twin(self):
         bad_twin = make_twin(self.user, name="Nul")
         make_behavior(
-            bad_twin, comprehension_level=0, motivation=0, learning_speed=0,
-            error_rate=100, fatigue_level=100, attention_level=0, stress_level=100,
+            bad_twin,
+            comprehension_level=0,
+            motivation=0,
+            learning_speed=0,
+            error_rate=100,
+            fatigue_level=100,
+            attention_level=0,
+            stress_level=100,
         )
         result = engine.simulate_quiz(bad_twin, self.quiz)
         self.assertGreaterEqual(result["simulated_score"], 0.0)
@@ -91,7 +106,9 @@ class EngineTests(TestCase):
 
     def test_simulate_quiz_time_capped_by_limit(self):
         quiz = make_quiz(self.user, time_limit_minutes=1)
-        self.assertLessEqual(engine.simulate_quiz(self.twin, quiz)["simulated_time_seconds"], 60)
+        self.assertLessEqual(
+            engine.simulate_quiz(self.twin, quiz)["simulated_time_seconds"], 60
+        )
 
     def test_simulate_quiz_without_questions(self):
         empty = make_quiz(self.user, with_questions=False)
@@ -102,7 +119,8 @@ class EngineTests(TestCase):
         first = engine.simulate_course(self.twin, self.course)
         self.assertEqual(first, engine.simulate_course(self.twin, self.course))
         self.assertEqual(
-            set(first), {"simulated_score", "simulated_time_seconds", "behavior_snapshot"}
+            set(first),
+            {"simulated_score", "simulated_time_seconds", "behavior_snapshot"},
         )
         self.assertGreaterEqual(first["simulated_time_seconds"], 30)
 
@@ -173,27 +191,36 @@ class ChatErrorHandlingTests(TestCase):
         exc = BadRequestError(
             "maximum context length exceeded", response=httpx_response(400), body=None
         )
-        with patch.object(groq_client, "_get_client", return_value=self._client_raising(exc)):
+        with patch.object(
+            groq_client, "_get_client", return_value=self._client_raising(exc)
+        ):
             with self.assertRaises(BadRequestError):
                 groq_client._chat("prompt")
 
     def test_other_bad_request_is_reraised(self):
         exc = BadRequestError("champ invalide", response=httpx_response(400), body=None)
-        with patch.object(groq_client, "_get_client", return_value=self._client_raising(exc)):
+        with patch.object(
+            groq_client, "_get_client", return_value=self._client_raising(exc)
+        ):
             with self.assertRaises(BadRequestError):
                 groq_client._chat("prompt")
 
     def test_rate_limit_is_reraised(self):
         exc = RateLimitError("quota", response=httpx_response(429), body=None)
-        with patch.object(groq_client, "_get_client", return_value=self._client_raising(exc)):
+        with patch.object(
+            groq_client, "_get_client", return_value=self._client_raising(exc)
+        ):
             with self.assertRaises(RateLimitError):
                 groq_client._chat("prompt")
 
-    def test_generic_api_error_hits_undefined_name(self):
-        """⚠️ BUG connu : `except groq.APIError` sans `import groq` → NameError."""
-        exc = APIError("boom", request=httpx.Request("POST", "https://api.groq.com"), body=None)
-        with patch.object(groq_client, "_get_client", return_value=self._client_raising(exc)):
-            with self.assertRaises(NameError):
+    def test_generic_api_error_is_reraised(self):
+        exc = APIError(
+            "boom", request=httpx.Request("POST", "https://api.groq.com"), body=None
+        )
+        with patch.object(
+            groq_client, "_get_client", return_value=self._client_raising(exc)
+        ):
+            with self.assertRaises(APIError):
                 groq_client._chat("prompt")
 
 
@@ -250,7 +277,9 @@ class ScoreQuizAnswersTests(TestCase):
         self.assertEqual(result["correct"], 0)
 
     def test_missing_answer_is_skipped(self):
-        self.assertEqual(groq_client.score_quiz_answers(self.questions, [])["correct"], 0)
+        self.assertEqual(
+            groq_client.score_quiz_answers(self.questions, [])["correct"], 0
+        )
 
     def test_no_questions_returns_zero(self):
         result = groq_client.score_quiz_answers([], [])
@@ -283,6 +312,33 @@ class LLMPipelineTests(TestCase):
         self.assertTrue(result["passed"])
         self.assertEqual(len(result["llm_answers"]), 1)
         self.assertIn("comprehension_level", result["behavior_snapshot"])
+
+    def test_llm_answer_carries_improvement_axis(self):
+        with patch.object(groq_client, "_chat", return_value=FAKE_QUIZ_JSON):
+            result = groq_client.simulate_quiz_with_llm(self.twin, self.quiz)
+        answer = result["llm_answers"][0]
+        self.assertIn("improvement", answer)
+        self.assertIn("Consolider", answer["improvement"])
+
+    def test_missing_improvement_defaults_to_empty_string(self):
+        # LLM omet le champ → le pipeline le garantit quand mêmeEDT-78 Simulation
+        without = json.dumps(
+            {
+                "answers": [
+                    {
+                        "question_title": "2+2 ?",
+                        "question_index": 1,
+                        "chosen_index": 1,
+                        "reasoning": "ok",
+                    }
+                ],
+                "simulated_time_seconds": 60,
+                "feedback": "f",
+            }
+        )
+        with patch.object(groq_client, "_chat", return_value=without):
+            result = groq_client.simulate_quiz_with_llm(self.twin, self.quiz)
+        self.assertEqual(result["llm_answers"][0]["improvement"], "")
 
     def test_simulate_quiz_with_invalid_json_raises(self):
         with patch.object(groq_client, "_chat", return_value="pas de json"):
@@ -320,9 +376,12 @@ class SimulationResultModelTests(TestCase):
 
     def _make(self, **kw):
         defaults = dict(
-            user=self.user, twin=self.twin,
+            user=self.user,
+            twin=self.twin,
             simulation_type=SimulationResult.SimulationType.QUIZ,
-            quiz=self.quiz, simulated_score=80.0, simulated_time_seconds=100,
+            quiz=self.quiz,
+            simulated_score=80.0,
+            simulated_time_seconds=100,
         )
         defaults.update(kw)
         return SimulationResult.objects.create(**defaults)
@@ -334,13 +393,19 @@ class SimulationResultModelTests(TestCase):
     def test_ordering_is_newest_first(self):
         old = self._make()
         new = self._make()
-        self.assertEqual(list(SimulationResult.objects.all())[0].pk, max(old.pk, new.pk))
+        self.assertEqual(
+            list(SimulationResult.objects.all())[0].pk, max(old.pk, new.pk)
+        )
 
-    def test_quiz_deletion_sets_null(self):
+    def test_quiz_deletion_cascades_to_simulation_results(self):
         result = self._make()
+        result_pk = result.pk
+        quiz_id = self.quiz.id
+
         self.quiz.delete()
-        result.refresh_from_db()
-        self.assertIsNone(result.quiz)
+
+        self.assertFalse(SimulationResult.objects.filter(pk=result_pk).exists())
+        self.assertFalse(Quiz.objects.filter(pk=quiz_id).exists())
 
     def test_twin_deletion_cascades(self):
         self._make()
@@ -378,7 +443,9 @@ class SimulateQuizViewTests(BaseAPITest):
 
     def test_twin_of_another_user_is_404(self):
         foreign = make_twin(self.other)
-        res = self.client.post(self.url, self._payload(twin_id=foreign.pk), format="json")
+        res = self.client.post(
+            self.url, self._payload(twin_id=foreign.pk), format="json"
+        )
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_unknown_quiz_is_404(self):
@@ -391,7 +458,10 @@ class SimulateQuizViewTests(BaseAPITest):
         self.assertEqual(res.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertIn("Behavior", res.data["detail"])
 
-    @patch("simulation.views.simulate_quiz_with_llm", side_effect=ValueError("no questions"))
+    @patch(
+        "simulation.views.simulate_quiz_with_llm",
+        side_effect=ValueError("no questions"),
+    )
     def test_value_error_is_422(self, _mock):
         res = self.client.post(self.url, self._payload(), format="json")
         self.assertEqual(res.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -406,10 +476,26 @@ class SimulateQuizViewTests(BaseAPITest):
 
     def test_success_persists_result(self):
         fake = {
-            "simulated_score": 80.0, "correct": 4, "total": 5,
-            "simulated_time_seconds": 120, "passed": True, "feedback": "ok",
-            "behavior_snapshot": {"comprehension_level": 70, "motivation": 60, "fatigue_level": 30},
-            "llm_answers": [],
+            "simulated_score": 80.0,
+            "correct": 4,
+            "total": 5,
+            "simulated_time_seconds": 120,
+            "passed": True,
+            "feedback": "ok",
+            "behavior_snapshot": {
+                "comprehension_level": 70,
+                "motivation": 60,
+                "fatigue_level": 30,
+            },
+            "llm_answers": [
+                {
+                    "question_index": 1,
+                    "question_title": "2+2 ?",
+                    "chosen_index": 1,
+                    "reasoning": "évident",
+                    "improvement": "Réviser les tables d'addition.",
+                }
+            ],
         }
         with patch("simulation.views.simulate_quiz_with_llm", return_value=fake):
             res = self.client.post(self.url, self._payload(), format="json")
@@ -417,9 +503,17 @@ class SimulateQuizViewTests(BaseAPITest):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(res.data["quiz_title"], self.quiz.title)
         self.assertEqual(res.data["twin_name"], self.twin.name)
+        # L'axe d'amélioration est exposé au front dans la réponse
+        self.assertEqual(
+            res.data["llm_answers"][0]["improvement"], "Réviser les tables d'addition."
+        )
 
         saved = SimulationResult.objects.get()
         self.assertEqual(saved.user, self.user)
+        # ... et persisté dans answer_details pour l'historique
+        self.assertEqual(
+            saved.answer_details[0]["improvement"], "Réviser les tables d'addition."
+        )
         self.assertEqual(saved.simulation_type, "quiz")
         self.assertEqual(saved.simulated_score, 80.0)
 
@@ -450,20 +544,31 @@ class SimulateCourseViewTests(BaseAPITest):
         res = self.client.post(self.url, self._payload(twin_id=naked.pk), format="json")
         self.assertEqual(res.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-    @patch("simulation.views.simulate_course_with_llm", side_effect=ValueError("bad json"))
+    @patch(
+        "simulation.views.simulate_course_with_llm", side_effect=ValueError("bad json")
+    )
     def test_value_error_is_422(self, _mock):
         res = self.client.post(self.url, self._payload(), format="json")
         self.assertEqual(res.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-    @patch("simulation.views.simulate_course_with_llm", side_effect=EnvironmentError("no key"))
+    @patch(
+        "simulation.views.simulate_course_with_llm",
+        side_effect=EnvironmentError("no key"),
+    )
     def test_environment_error_is_503(self, _mock):
         res = self.client.post(self.url, self._payload(), format="json")
         self.assertEqual(res.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
     def test_success_persists_result(self):
         fake = {
-            "simulated_score": 65.0, "simulated_time_seconds": 200, "feedback": "clair",
-            "behavior_snapshot": {"comprehension_level": 70, "motivation": 60, "fatigue_level": 30},
+            "simulated_score": 65.0,
+            "simulated_time_seconds": 200,
+            "feedback": "clair",
+            "behavior_snapshot": {
+                "comprehension_level": 70,
+                "motivation": 60,
+                "fatigue_level": 30,
+            },
         }
         with patch("simulation.views.simulate_course_with_llm", return_value=fake):
             res = self.client.post(self.url, self._payload(), format="json")
@@ -487,22 +592,35 @@ class SimulationHistoryTests(BaseAPITest):
         self.url = reverse("simulation-history")
 
         SimulationResult.objects.create(
-            user=self.user, twin=self.twin_a, simulation_type="quiz", quiz=self.quiz,
-            simulated_score=50.0, simulated_time_seconds=60,
+            user=self.user,
+            twin=self.twin_a,
+            simulation_type="quiz",
+            quiz=self.quiz,
+            simulated_score=50.0,
+            simulated_time_seconds=60,
         )
         SimulationResult.objects.create(
-            user=self.user, twin=self.twin_b, simulation_type="course", course=self.course,
-            simulated_score=70.0, simulated_time_seconds=90,
+            user=self.user,
+            twin=self.twin_b,
+            simulation_type="course",
+            course=self.course,
+            simulated_score=70.0,
+            simulated_time_seconds=90,
         )
         SimulationResult.objects.create(
-            user=self.other, twin=make_twin(self.other), simulation_type="quiz",
-            simulated_score=10.0, simulated_time_seconds=10,
+            user=self.other,
+            twin=make_twin(self.other),
+            simulation_type="quiz",
+            simulated_score=10.0,
+            simulated_time_seconds=10,
         )
         self.client.force_login(self.user)
 
     def test_requires_authentication(self):
         self.client.logout()
-        self.assertEqual(self.client.get(self.url).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            self.client.get(self.url).status_code, status.HTTP_403_FORBIDDEN
+        )
 
     def test_scoped_to_current_user(self):
         self.assertEqual(len(self.client.get(self.url).data), 2)

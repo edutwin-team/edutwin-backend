@@ -37,7 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
             last_name=validated_data['last_name'],
             profile_picture=validated_data.get('profile_picture'),
             birthdate=validated_data.get('birthdate'),
-            is_active=True #true for now
+            is_active=False 
         )
 
         user.set_password(validated_data['password'])

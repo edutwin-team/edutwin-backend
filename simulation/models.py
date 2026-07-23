@@ -30,7 +30,7 @@ class SimulationResult(models.Model):
     # Generic FK to either Quiz or Course (store id + type)
     quiz = models.ForeignKey(
         "content.Quiz",
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="simulation_results",

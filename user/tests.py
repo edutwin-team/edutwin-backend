@@ -63,11 +63,11 @@ class UserSerializerTests(TestCase):
         "last_name": "Dupont",
     }
 
-    def test_create_hashes_password_and_activates(self):
+    def test_create_hashes_password_and_keeps_inactive(self):
         s = UserSerializer(data=self.payload)
         self.assertTrue(s.is_valid(), s.errors)
         user = s.save()
-        self.assertTrue(user.is_active)
+        self.assertFalse(user.is_active)
         self.assertNotEqual(user.password, "Test1234!")
         self.assertTrue(user.check_password("Test1234!"))
 

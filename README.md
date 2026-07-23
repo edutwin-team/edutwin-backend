@@ -1,192 +1,180 @@
-# edutwin-backend
+<div align="center">
 
-# 📘 Workflow Git pour le projet
+# EduTwin Backend
 
-## 1. Introduction
+**API REST du jumeau numérique éducatif — simule le comportement d'apprentissage d'élèves virtuels via LLM pour aider les enseignants à tester leurs contenus pédagogiques avant diffusion.**
 
-Ce document explique le **workflow Git recommandé** pour notre projet.  
-Il est conçu pour :
+[![CI/CD Pipeline](https://github.com/edutwin-team/edutwin-backend/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/edutwin-team/edutwin-backend/actions/workflows/ci-cd.yml)
+![Docker](https://img.shields.io/badge/docker-v1.2.0-blue?logo=docker)
+[![Python](https://img.shields.io/badge/python-3.14-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/django-5.2-092E20?logo=django)](https://www.djangoproject.com/)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen)](.coveragerc)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-- garder un historique clair et propre  
-- éviter les conflits  
-- faciliter la collaboration via GitHub et Jira  
+[Démarrage rapide](#-démarrage-rapide) · [Architecture](#-architecture) · [API](#-documentation-api) · [CI/CD](#-cicd) · [Sécurité](#-sécurité) · [Contribuer](#-contribuer)
+
+</div>
 
 ---
 
-## 2. Branches principales
+## 🎯 Qu'est-ce qu'EduTwin ?
 
-### `main`
+Un enseignant crée un **jumeau numérique** (Digital Twin) : un élève virtuel défini par un profil comportemental (compréhension, motivation, fatigue, style d'apprentissage…) et un contexte pédagogique. Le backend fait ensuite **incarner ce profil par un LLM** (Groq / Llama 3.1) qui passe les quiz et lit les cours à la place de l'élève, puis restitue :
 
-- Contient uniquement le code **stable**  
-- **Jamais de commit direct**  
-- Toute modification passe par une **Pull Request** (PR)
+- un **score simulé** et le détail des réponses,
+- un **feedback à la première personne** de l'élève virtuel,
+- des **suggestions d'amélioration** des questions à destination de l'enseignant (clarté, distracteurs, difficulté).
 
-### `develop`
+Un **moteur de simulation déterministe** (pondération des traits comportementaux + bruit seedé) complète le LLM pour des résultats reproductibles.
 
-- Contient le code **en cours de développement**  
-- Toutes les PR des features arrivent ici  
-- Toujours mise à jour avant de commencer une nouvelle feature
+## 🚀 Démarrage rapide
 
-### `feature/nom-fonction`
+### Option A — Docker (recommandé)
 
-- Branches personnelles pour chaque fonctionnalité ou correction
--Ajputer le nom et numéro de ticket jira
-- Exemple :  
-
-```text
-feature/login-EDT-10
-feature/api-users-EDT-11
-feature/dashboard-ui-EDT-12
+```bash
+git clone https://github.com/edutwin-team/edutwin-backend.git
+cd edutwin-backend
+cp .env.example .env   # renseigner SUPABASE_DB_URL, GROQ_API_KEY, SECRET_KEY
+./start.sh             # docker compose up --build (API + worker Celery + Valkey)
 ```
 
-## 3. Workflow quotidien
+### Option B — Environnement virtuel
 
-### 1️⃣ Mettre à jour develop avant de commencer
-
-```
-# Se placer sur develop
-git checkout develop
-
-# Récupérer les dernières modifications
-git pull origin develop
-
-# Créer sa branche feature
-git checkout -b feature/ma-feature
+```bash
+git config core.hooksPath hooks       # active les hooks (anti-.env, ticket Jira)
+python -m venv .venv && source .venv/bin/activate   # Windows : .venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
-### 2️⃣ Travailler sur la feature
+API disponible sur `http://127.0.0.1:8000` — healthcheck : `GET /health` → `{"status": "ok"}`.
+
+## 🏗 Architecture
 
 ```
-# Ajouter les fichiers modifiés
-git add .
-
-# Commit avec message clair avec com et numéro de ticket jira
-git commit -m "feat: ajouter formulaire de login EDT-15"
-
-# Pousser la branche sur GitHub
-git push -u origin feature/ma-feature
+                        ┌─────────────────────────────────────────┐
+  React/Vite (5173) ──▶ │            Django 5.2 + DRF             │
+                        │  ┌────────┬────────┬─────────────────┐  │
+                        │  │  user  │ twins  │    content      │  │
+                        │  │  auth  │ profils│  cours & quiz   │  │
+                        │  ├────────┴───┬────┴────┬────────────┤  │
+                        │  │ simulation │ insights│  dashboard │  │
+                        │  └─────┬──────┴─────────┴────────────┘  │
+                        └────────┼───────────────┬────────────────┘
+                                 ▼               ▼
+                          Groq API          PostgreSQL
+                       (Llama 3.1 8B)       (Supabase)
+                                 │
+                        Celery ──┴── Valkey/Redis (broker)
 ```
 
-### 3️⃣ Ouvrir une Pull Request
+### Applications Django
 
-Branche source → feature/ma-feature
+| App | Rôle |
+|---|---|
+| `user` | Utilisateur custom (email + rôles admin/teacher/student), inscription avec **vérification e-mail par token**, session auth, profils éducatifs |
+| `twins` | `DigitalTwin`, `Behavior` (14 traits comportementaux 0–100), `PedagogicalContext` + objectifs |
+| `content` | Cours, quiz, questions/réponses typés, permissions par créateur |
+| `simulation` | Moteur déterministe (`engine.py`) + client LLM (`groq_client.py`), résultats persistés |
+| `insights` / `dashboard` | Agrégations et restitution pour le front |
 
-Branche cible → develop
+### Stack technique
 
-Titre PR clair et description détaillée qui sera le message de commit squashé
+| Couche | Techno | Pourquoi |
+|---|---|---|
+| API | Django 5.2 + DRF 3.17 | Batteries incluses : ORM, admin, migrations, auth session |
+| BDD | PostgreSQL (Supabase) via `dj-database-url` | Managée, SQLite `:memory:` auto en CI (`GITHUB_ACTIONS=true`) |
+| Tâches async | Celery 5.5 + Valkey (broker) + `django-celery-results` | Simulations LLM longues hors requête HTTP |
+| IA | Groq — `llama-3.1-8b-instant` | Latence très faible, sortie JSON structurée parsée/validée |
+| Docs API | drf-spectacular (OpenAPI 3) | Schéma auto → Swagger + Redoc |
+| Serveur | Gunicorn + WhiteNoise | Statiques servis sans CDN, adapté à Render |
+| Qualité | mypy + django-stubs, coverage (**seuil 90 %**), hooks git | Typage vérifié en CI, pas de `.env` commité, ticket Jira obligatoire |
 
-### 4️⃣ Mettre à jour sa branche si develop a avancé
+## 📖 Documentation API
 
-Option Merge (simple) :
+| URL | Contenu |
+|---|---|
+| `/api/docs/` | Swagger UI interactif |
+| `/api/redoc/` | Redoc |
+| `/api/schema/` | Schéma OpenAPI brut ([`schema.yml`](schema.yml) versionné) |
 
-```
-git checkout feature/ma-feature
-git pull origin develop
-git push
-```
+Routes principales : `/api/auth/` · `/api/twins/` · `/api/content/` · `/api/simulation/` · `/api/insights/` · `/api/dashboard/`
 
-5️⃣ Merge de la PR
+Exemple — lancer une simulation de quiz :
 
-Squash and Merge par défaut
-
-Chaque PR = 1 commit sur develop
-
-Pas de merge commit ni de rebase direct sur develop
-
-## 4. Fusion vers main (version stable)
-
-Lorsque develop contient des features testées et stables, la fusion vers main doit se faire via une Pull Request selon les règles de protection :
-
-Créer une Pull Request
-
-Branche source : develop
-
-Branche cible : main
-
-Revue obligatoire
-
-Au moins un reviewer doit approuver la Pull Request.
-
-## 5. Conseils pour éviter les conflits
-
-Toujours faire un pull de develop avant de créer une feature branch
-
-Mettre à jour sa branche si develop avance pendant le développement
-
-Faire des commits petits et clairs
-
-Squash les commits avant le merge pour garder l’historique propre
-
-## 8. Résumé visuel
-
-```
-main  ←── merge stable finalisé
-  ↑
-develop ←─ PR ← feature/a
-         ← PR ← feature/b
-         ← PR ← feature/c
-         ← PR ← feature/d
-         ← PR ← feature/e
-         ← PR ← feature/f
-
-✅ Workflow recommandé :
-
-Feature branch → PR → develop → main
-
-Squash and Merge pour garder un historique propre
-
-Review obligatoire
-
-Ne jamais push directement sur main ou develop
+```http
+POST /api/simulation/quiz/
+{ "twin_id": 3, "quiz_id": 7 }
+→ 201 { "simulated_score": 62.5, "answer_details": [...], "llm_feedback": "..." }
 ```
 
-## Setup and launch
-0.acLoading 
-0. excute git hooks:
+## ⚙️ CI/CD
 
-   ```bash
-   git config core.hooksPath hooks
-   ```
-1. Create a virtual environment:
+Pipeline GitHub Actions ([`ci-cd.yml`](.github/workflows/ci-cd.yml)) déclenché sur push/PR vers `main` et `develop` :
 
-   ```bash
-   python -m venv .venv
-   ```
+```
+ push/PR ──▶ quality ──▶ test ──▶ build-and-push ──▶ deploy
+             lint,       coverage   Docker Hub         Render
+             migrations, ≥ 90 %     (buildx + cache    deploy hook
+             mypy                    GHA, tag SHA)     (curl + retry)
+```
 
-1. Activate the virtual environment:
+1. **`quality`** — `manage.py check`, détection de migrations manquantes (`makemigrations --check`), type-check mypy. Fail-fast, timeout 10 min.
+2. **`test`** — tests Django + coverage, **échec si < 90 %**, rapport XML archivé en artefact.
+3. **`build-and-push`** *(push uniquement)* — build Buildx avec cache GitHub Actions, push vers [`mish1ma/edutwin-backend`](https://hub.docker.com/r/mish1ma/edutwin-backend). Tags : `latest` (main), `dev` (develop), **`sha-<commit>` immuable → rollback possible**.
+4. **`deploy`** — déclenche le deploy hook **Render** de l'environnement correspondant via GitHub Environments (`production` / `development`, secrets scopés + approbation manuelle possible).
 
-   - **Linux/macOS:**
+Optimisations : `concurrency` annule les runs redondants sur une même PR ; la CI bascule automatiquement sur SQLite en mémoire (zéro secret requis pour les tests).
 
-     ```bash
-     source .venv/bin/activate
-     ```
+### Image Docker
 
-   - **Windows (PowerShell / Command Prompt):**
+Image `python:3.14-slim`, exécution **non-root** (utilisateur `django`), `entrypoint.sh` en prod : `migrate` → `collectstatic` → Gunicorn 2 workers sur `$PORT`.
 
-     ```bash
-     .venv\Scripts\activate
-     ```
+## 🔒 Sécurité
 
-1. Install dependencies:
+- **CSRF** : `CsrfViewMiddleware` + endpoint `GET /api/csrf/` pour le front SPA ; `CSRF_TRUSTED_ORIGINS` par env.
+- **Sessions** : cookies `HttpOnly` (anti-XSS), `Secure` en prod, `SameSite=Lax`.
+- **Rate limiting** : throttling DRF — `5000/jour` par utilisateur, `100/h` anonyme.
+- **Auth/roles** : `IsAuthenticated` par défaut ; permissions custom `IsAdminOrTeacherOrReadOnly`, `IsOwnerOrAdmin`.
+- **Vérification e-mail** : compte inactif tant que le lien d'activation (uid base64 + token Django) n'est pas cliqué.
+- **Secrets** : `SECRET_KEY` obligatoire en prod (levée d'exception sinon), hook pre-commit bloquant tout `.env`, conteneur non-root.
+- **CORS** : origines explicites par environnement, `django-cors-headers`.
 
-   ```bash
-     pip install -r requirements.txt
-   ```
+## 🔧 Variables d'environnement
 
-1. Apply database migrations:
+| Variable | Requis | Description |
+|---|---|---|
+| `SUPABASE_DB_URL` | ✅ (hors CI) | URL PostgreSQL |
+| `GROQ_API_KEY` | ✅ | Clé API Groq (simulations LLM) |
+| `SECRET_KEY` | ✅ en prod | Clé Django |
+| `ENVIRONMENT` | — | `development` (défaut) / `production` |
+| `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` | prod | Origines front, séparées par virgules |
+| `CELERY_BROKER_URL` | — | Défaut `redis://localhost:6379/0` |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | e-mails | SMTP pour l'activation de compte |
 
-   ```bash
-   python manage.py migrate
-   ```
+Voir [`.env.example`](.env.example).
 
-1. Run the Django development server:
+## 🧪 Tests
 
-   ```bash
-   python manage.py runserver
-   ```
+```bash
+coverage run manage.py test -v 2
+coverage report   # échoue sous 90 % (voir .coveragerc)
+mypy . --ignore-missing-imports
+```
 
-   ```
+## 🤝 Contribuer
 
-The API will be available at `http://127.0.0.1:8000`.
+Workflow **feature branch → PR → `develop` → `main`**, squash & merge, review obligatoire, jamais de push direct sur `main`/`develop`.
 
-To consult the OpenAPI documentation, visit `http://127.0.0.1:8000/api/docs/`.
+```bash
+git checkout develop && git pull
+git checkout -b feature/ma-feature-EDT-42
+git commit -m "feat: ajouter X EDT-42"   # le hook commit-msg exige EDT-XXX
+```
+
+Détails complets (conventions, mise à jour de branche, protection) : [CONTRIBUTING.md](CONTRIBUTING.md) · Template de PR : [`.github/pull_request_template.md`](.github/pull_request_template.md)
+
+## 📄 Licence
+
+[MIT](LICENSE) © 2026 edutwin-team
