@@ -40,7 +40,7 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
-    objects = UserManager()  # type: ignore[assignment]
+    objects = UserManager()  # type: ignore[assignment,misc]
 
 
 class EducationalProfile(models.Model):
@@ -61,4 +61,3 @@ class EducationalProfile(models.Model):
 
     def __str__(self):
         return self.user.email
-
