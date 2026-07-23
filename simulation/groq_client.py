@@ -191,10 +191,10 @@ Réponds en JSON structuré UNIQUEMENT selon ce format (pas de texte avant ni ap
       "question_index": 1,
       "chosen_index": 2,
       "reasoning": "Courte explication de pourquoi tu as choisi cette réponse, en restant cohérent avec ton profil.",
-      "improvement": "Axe d'amélioration concret et actionnable pour cette question : quelle notion réviser, quelle méthode appliquer, ou quel type d'exercice pratiquer. 1-2 phrases."
+      "improvement": "Analyse à destination de L'ENSEIGNANT qui a créé cette question, PAS de l'élève : la question est-elle claire et sans ambiguïté ? Le niveau de difficulté est-il cohérent avec la matière ? Les mauvaises réponses (distracteurs) sont-elles pertinentes ou trop évidentes/trop proches ? Suggestion concrète d'amélioration de la question si besoin. 1-2 phrases."
     }}
   ],
-  "simulated_time_seconds": 300,
+  "simulated_time_seconds": 300,e
   "feedback": "Feedback global en 3-4 phrases à la première personne sur ce quiz : difficulté perçue, ce qui était facile ou difficile, suggestions d'amélioration."
 }}
 ```
