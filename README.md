@@ -5,7 +5,7 @@
 **API REST du jumeau numérique éducatif — simule le comportement d'apprentissage d'élèves virtuels via LLM pour aider les enseignants à tester leurs contenus pédagogiques avant diffusion.**
 
 [![CI/CD Pipeline](https://github.com/edutwin-team/edutwin-backend/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/edutwin-team/edutwin-backend/actions/workflows/ci-cd.yml)
-[![Docker Image](https://img.shields.io/docker/v/mish1ma/edutwin-backend/latest?label=docker&logo=docker)](https://hub.docker.com/r/mish1ma/edutwin-backend)
+![Docker](https://img.shields.io/badge/docker-v1.2.0-blue?logo=docker)
 [![Python](https://img.shields.io/badge/python-3.14-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/django-5.2-092E20?logo=django)](https://www.djangoproject.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen)](.coveragerc)
