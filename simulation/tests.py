@@ -409,6 +409,29 @@ class SimulationResultModelTests(TestCase):
         self.assertEqual(SimulationResult.objects.count(), 0)
 
 
+def test_quiz_deletion_cascades_to_simulation_results(self):
+    user = make_user(email="simu@example.com")
+    twin = make_twin(user)
+    quiz = make_quiz(user)
+
+    SimulationResult.objects.create(
+        user=user,
+        twin=twin,
+        simulation_type=SimulationResult.SimulationType.QUIZ,
+        quiz=quiz,
+        simulated_score=80,
+        simulated_time_seconds=120,
+        passed=True,
+        correct=1,
+        total=1,
+        behavior_snapshot={},
+    )
+
+    quiz.delete()
+
+    self.assertEqual(SimulationResult.objects.count(), 0)
+
+
 # ---------------------------------------------------------
 # VIEWS
 # ---------------------------------------------------------

@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
+from typing import cast
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,8 +55,7 @@ else:
     URL_DB = os.getenv("SUPABASE_DB_URL")
     if not URL_DB:
         raise ValueError("SUPABASE_DB_URL is not set")
-    DATABASES = {"default": dj_database_url.parse(URL_DB)}
-
+    DATABASES = {"default": cast(dict, dj_database_url.parse(URL_DB))}
 
 # ---------------------------------------------------------
 # 3. APPLICATIONS & MIDDLEWARE
@@ -164,17 +164,16 @@ else:
 CORS_ALLOW_CREDENTIALS = True
 
 # Les cookies doivent être sécurisés (HTTPS) en production
-SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
-CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
 
 # Sécurisation HTTPS (True en prod, False en dev pour le localhost)
-SESSION_COOKIE_SECURE = IS_PRODUCTION  
-CSRF_COOKIE_SECURE = IS_PRODUCTION     
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_SECURE = IS_PRODUCTION
 
 # --- Bonus Sécurité (Recommandé) ---
 # Empêche JavaScript d'accéder au cookie de session (protection contre les attaques XSS)
-SESSION_COOKIE_HTTPONLY = True 
-
+SESSION_COOKIE_HTTPONLY = True
 
 
 # ---------------------------------------------------------
@@ -202,27 +201,25 @@ AUTH_USER_MODEL = "user.User"
 
 # --- CONFIGURATION DES LOGS VERBOSE ---
 LOGGING = {
-    'version': 1,
+    "version": 1,
     # False est crucial : sinon Django désactive les logs des bibliothèques tierces
-    'disable_existing_loggers': False, 
-    
-    'formatters': {
-        'verbose': {
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
             # Format détaillé : [Date] NIVEAU nom_du_module (fichier:ligne) -> Message
-            'format': '[{asctime}] {levelname} {name} ({module}:{lineno}) -> {message}',
-            'style': '{',
+            "format": "[{asctime}] {levelname} {name} ({module}:{lineno}) -> {message}",
+            "style": "{",
         },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
         },
     },
-    
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
         # Optionnel : pour écrire dans un fichier (utile en prod ou pour garder un historique)
         # 'file': {
@@ -232,33 +229,29 @@ LOGGING = {
         #     'formatter': 'verbose',
         # },
     },
-    
-    'loggers': {
+    "loggers": {
         # 1. Logs globaux de Django (mises à jour, migrations, etc.)
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO', # Laisse en INFO, sinon le framework Django va spammer ta console
-            'propagate': False,
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",  # Laisse en INFO, sinon le framework Django va spammer ta console
+            "propagate": False,
         },
-        
         # 2. Requêtes SQL (Le plus important pour le verbose DB)
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'DEBUG', # Affiche TOUTES les requêtes SQL exécutées
-            'propagate': True,
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",  # Affiche TOUTES les requêtes SQL exécutées
+            "propagate": True,
         },
-        
         # 3. Requêtes HTTP (Détails des requêtes/réponses)
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'DEBUG', 
-            'propagate': True,
+        "django.request": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
         },
     },
-    
     # Le logger "root" capture les logs de TON code (tes propres logging.info(), etc.)
-    'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
     },
 }
