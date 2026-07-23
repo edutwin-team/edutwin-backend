@@ -13,6 +13,7 @@ Flow for course:
 import os
 import json
 import re
+import groq
 from groq import Groq, BadRequestError, RateLimitError
 
 _client: Groq | None = None
@@ -213,6 +214,9 @@ Règles :
     except (ValueError, json.JSONDecodeError) as e:
         raise ValueError(f"LLM returned invalid JSON: {e}\nRaw output:\n{raw}")
 
+    if not isinstance(parsed, dict):  # ← ajouté
+        raise ValueError("LLM returned a list instead of a dict")
+
     # --- NEW ENRICHMENT BLOCK ---
     answers = parsed.get("answers", [])
 
@@ -393,6 +397,9 @@ Règles :
         parsed = _extract_json(raw)
     except (ValueError, json.JSONDecodeError) as e:
         raise ValueError(f"LLM returned invalid JSON: {e}\nRaw:\n{raw}")
+
+    if not isinstance(parsed, dict):  # ← ajouté
+        raise ValueError("LLM returned a list instead of a dict")
 
     b = twin.behavior
     return {

@@ -31,7 +31,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    username = None
+    username = None  # type: ignore[assignment]
     email = models.EmailField(unique=True)
     role = EnumField(Role, default=Role.teacher)
     profile_picture = models.ImageField(upload_to="profiles/", blank=True, null=True)
@@ -40,13 +40,14 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
-    objects = UserManager()
+    objects = UserManager()  # type: ignore[assignment,misc]
+
 
 class EducationalProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="educational_profile"
+        related_name="educational_profile",
     )
 
     school = models.CharField(max_length=255)

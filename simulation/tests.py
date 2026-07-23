@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from groq import APIError, BadRequestError, RateLimitError
 from rest_framework import status
-
+from content.models import Quiz
 from config.factories import (
     BaseAPITest,
     make_behavior,
@@ -213,15 +213,14 @@ class ChatErrorHandlingTests(TestCase):
             with self.assertRaises(RateLimitError):
                 groq_client._chat("prompt")
 
-    def test_generic_api_error_hits_undefined_name(self):
-        """⚠️ BUG connu : `except groq.APIError` sans `import groq` → NameError."""
+    def test_generic_api_error_is_reraised(self):
         exc = APIError(
             "boom", request=httpx.Request("POST", "https://api.groq.com"), body=None
         )
         with patch.object(
             groq_client, "_get_client", return_value=self._client_raising(exc)
         ):
-            with self.assertRaises(NameError):
+            with self.assertRaises(APIError):
                 groq_client._chat("prompt")
 
 
@@ -398,11 +397,15 @@ class SimulationResultModelTests(TestCase):
             list(SimulationResult.objects.all())[0].pk, max(old.pk, new.pk)
         )
 
-    def test_quiz_deletion_sets_null(self):
+    def test_quiz_deletion_cascades_to_simulation_results(self):
         result = self._make()
+        result_pk = result.pk
+        quiz_id = self.quiz.id
+
         self.quiz.delete()
-        result.refresh_from_db()
-        self.assertIsNone(result.quiz)
+
+        self.assertFalse(SimulationResult.objects.filter(pk=result_pk).exists())
+        self.assertFalse(Quiz.objects.filter(pk=quiz_id).exists())
 
     def test_twin_deletion_cascades(self):
         self._make()
