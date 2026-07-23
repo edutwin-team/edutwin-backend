@@ -397,39 +397,20 @@ class SimulationResultModelTests(TestCase):
             list(SimulationResult.objects.all())[0].pk, max(old.pk, new.pk)
         )
 
-    def test_quiz_deletion_sets_null(self):
+    def test_quiz_deletion_cascades_to_simulation_results(self):
         result = self._make()
+        result_pk = result.pk
+        quiz_id = self.quiz.id
+
         self.quiz.delete()
-        result.refresh_from_db()
-        self.assertIsNone(result.quiz)
+
+        self.assertFalse(SimulationResult.objects.filter(pk=result_pk).exists())
+        self.assertFalse(Quiz.objects.filter(pk=quiz_id).exists())
 
     def test_twin_deletion_cascades(self):
         self._make()
         self.twin.delete()
         self.assertEqual(SimulationResult.objects.count(), 0)
-
-
-def test_quiz_deletion_cascades_to_simulation_results(self):
-    user = make_user(email="simu@example.com")
-    twin = make_twin(user)
-    quiz = make_quiz(user)
-
-    SimulationResult.objects.create(
-        user=user,
-        twin=twin,
-        simulation_type=SimulationResult.SimulationType.QUIZ,
-        quiz=quiz,
-        simulated_score=80,
-        simulated_time_seconds=120,
-        passed=True,
-        correct=1,
-        total=1,
-        behavior_snapshot={},
-    )
-
-    quiz.delete()
-
-    self.assertEqual(SimulationResult.objects.count(), 0)
 
 
 # ---------------------------------------------------------
