@@ -29,12 +29,16 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-change-me")
 
 
 #email sending 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
+ANYMAIL = {
+    "BREVO_API_KEY": os.getenv("BREVO_API_KEY"),
+}
+# EMAIL_HOST = os.getenv('EMAIL_HOST')
+# EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+# EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -90,6 +94,7 @@ INSTALLED_APPS = [
     "simulation",
     "insights",
     "dashboard",
+    'anymail',
 ]
 
 MIDDLEWARE = [
