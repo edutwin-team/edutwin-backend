@@ -58,11 +58,11 @@ def activate_view(request, uidb64, token):
 def register_view(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save()
-        # send_verification_email(user, request)
+        user = serializer.save(is_active=False)
+        send_verification_email(user, request)
 
         return Response(
-            {"message": "Utilisateur créé. Vérifie ton email pour l’activer."},
+            {"message": "verify email."},
             status=201,
         )
     return Response(serializer.errors, status=400)
@@ -93,8 +93,8 @@ def login_view(request):
     if not user.check_password(password):
         return Response({"error": "invalid"}, status=401)
 
-    # if not user.is_active:
-    #     return Response({"error": "unverified"}, status=401)
+    if not user.is_active:
+        return Response({"error": "unverified"}, status=403)
 
     login(request, user)
     return Response({"message": "Logged in successfully"})
