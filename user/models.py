@@ -33,7 +33,7 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
-    role = EnumField(Role, default=Role.student)
+    role = EnumField(Role, default=Role.teacher)
     profile_picture = models.ImageField(upload_to="profiles/", blank=True, null=True)
     birthdate = models.DateField(null=True, blank=True)
 
